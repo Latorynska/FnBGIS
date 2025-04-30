@@ -1,508 +1,727 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FNB Branch Performance Dashboard</title>
+    <title>GeoDine Dashboard | FnB Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        #map { height: 500px; }
-        .chart-container { height: 300px; }
-        .branch-marker {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: #3b82f6;
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
+            min-height: 100vh;
         }
-        .performance-legend {
+
+        .dashboard-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(74, 222, 128, 0.5);
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 12px;
+            z-index: 1;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: rgba(17, 24, 39, 0.9) !important;
+            color: white !important;
+            border-radius: 8px !important;
+            backdrop-filter: blur(5px);
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(17, 24, 39, 0.9) !important;
+        }
+
+        .leaflet-control {
+            background: rgba(17, 24, 39, 0.7) !important;
+            color: white !important;
+            border-radius: 4px !important;
+        }
+
+        .leaflet-bar a {
+            color: white !important;
+            background: rgba(17, 24, 39, 0.7) !important;
+        }
+
+        .bg-pattern {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            z-index: 1000;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(74, 222, 128, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 30% 70%, rgba(239, 68, 68, 0.1) 0%, transparent 20%);
         }
-        .custom-popup {
-            min-width: 200px;
+
+        .sidebar {
+            transition: all 0.3s ease;
         }
-        .custom-popup h3 {
-            margin-top: 0;
-            color: #3b82f6;
+
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
-        .custom-popup .metrics {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 10px 0;
+
+        .active-sidebar-item {
+            background: rgba(74, 222, 128, 0.2);
+            border-left: 3px solid #10B981;
         }
-        .custom-popup .metric {
-            background: #f8fafc;
-            padding: 5px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .custom-popup .metric .value {
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        .custom-popup .trend {
-            display: flex;
-            align-items: center;
-            margin-top: 5px;
-        }
-        .trend-up {
-            color: #10b981;
-        }
-        .trend-down {
-            color: #ef4444;
-        }
-        .trend-neutral {
-            color: #64748b;
+
+        .table-row:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-                <div class="flex items-center">
-                    <i class="fas fa-utensils text-blue-500 text-2xl mr-3"></i>
-                    <h1 class="text-xl font-bold text-gray-800">FNB Branch Performance Dashboard</h1>
+
+<body class="text-white">
+    <!-- Background pattern -->
+    <div class="bg-pattern fixed inset-0 -z-10"></div>
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 bg-gray-900 bg-opacity-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
+            <div class="p-4 flex items-center space-x-3 border-b border-gray-800">
+                <div class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-map-marked-alt text-white"></i>
+                </div>
+                <h1 class="text-xl font-bold">GeoDine</h1>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-1">
+                <a href="#" class="sidebar-item active-sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-tachometer-alt w-5 text-center text-emerald-400"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-store w-5 text-center text-blue-400"></i>
+                    <span>Branches</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-chart-line w-5 text-center text-purple-400"></i>
+                    <span>Performance</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-map-marked w-5 text-center text-yellow-400"></i>
+                    <span>Coverage Areas</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-users w-5 text-center text-pink-400"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-cog w-5 text-center text-gray-400"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+
+            <div class="p-4 border-t border-gray-800">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-300"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium">Admin User</div>
+                        <div class="text-xs text-gray-400">admin@geodine.com</div>
+                    </div>
+                </div>
+                <button
+                    class="mt-4 w-full py-2 px-4 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm flex items-center justify-center space-x-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="bg-gray-900 bg-opacity-80 border-b border-gray-800 p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button class="sidebar-toggle p-2 rounded-lg hover:bg-gray-800">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="text-xl font-bold">Branch Performance Dashboard</h2>
                 </div>
                 <div class="flex items-center space-x-4">
                     <div class="relative">
-                        <select class="block appearance-none bg-white border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:border-blue-500">
-                            <option>All Regions</option>
-                            <option>North</option>
-                            <option>South</option>
-                            <option>East</option>
-                            <option>West</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
+                        <input type="text" placeholder="Search..."
+                            class="input-field pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-white placeholder-gray-400 text-sm">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
                     </div>
-                    <div class="relative">
-                        <select class="block appearance-none bg-white border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:border-blue-500">
-                            <option>Last 30 Days</option>
-                            <option>Last 90 Days</option>
-                            <option>This Year</option>
-                            <option>Last Year</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                    </div>
-                    <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-                        <i class="fas fa-download mr-2"></i>
-                        Export
+                    <button class="p-2 rounded-lg hover:bg-gray-800 relative">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-            <!-- Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Total Branches</p>
-                            <p class="text-2xl font-semibold text-gray-900">24</p>
-                        </div>
-                        <div class="p-3 rounded-full bg-blue-100 text-blue-600">
-                            <i class="fas fa-store text-xl"></i>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2"><span class="text-green-500">+2</span> from last quarter</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Total Revenue</p>
-                            <p class="text-2xl font-semibold text-gray-900">$1.24M</p>
-                        </div>
-                        <div class="p-3 rounded-full bg-green-100 text-green-600">
-                            <i class="fas fa-dollar-sign text-xl"></i>
+            <!-- Dashboard Content -->
+            <main class="p-6 space-y-6">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400">Total Branches</p>
+                                <h3 class="text-2xl font-bold">24</h3>
+                                <p class="text-xs text-emerald-400 mt-1"><i class="fas fa-arrow-up mr-1"></i> 12% from
+                                    last month</p>
+                            </div>
+                            <div
+                                class="w-12 h-12 rounded-full bg-emerald-500 bg-opacity-20 flex items-center justify-center">
+                                <i class="fas fa-store text-emerald-400"></i>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-sm text-gray-500 mt-2"><span class="text-green-500">↑12%</span> from last month</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Avg. Customer Rating</p>
-                            <p class="text-2xl font-semibold text-gray-900">4.3</p>
-                        </div>
-                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                            <i class="fas fa-star text-xl"></i>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2"><span class="text-green-500">↑0.2</span> from last quarter</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Top Performing</p>
-                            <p class="text-xl font-semibold text-gray-900">Downtown</p>
-                        </div>
-                        <div class="p-3 rounded-full bg-purple-100 text-purple-600">
-                            <i class="fas fa-trophy text-xl"></i>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2">$98K revenue this month</p>
-                </div>
-            </div>
 
-            <!-- Map and Charts Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Map Section -->
-                <div class="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
-                    <div class="p-4 border-b border-gray-200">
-                        <h2 class="text-lg font-medium text-gray-900">Branch Locations</h2>
-                        <p class="text-sm text-gray-500">Click on markers to view branch details</p>
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400">Total Revenue</p>
+                                <h3 class="text-2xl font-bold">$128,450</h3>
+                                <p class="text-xs text-emerald-400 mt-1"><i class="fas fa-arrow-up mr-1"></i> 8% from
+                                    last month</p>
+                            </div>
+                            <div
+                                class="w-12 h-12 rounded-full bg-blue-500 bg-opacity-20 flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-blue-400"></i>
+                            </div>
+                        </div>
                     </div>
-                    <div id="map" class="w-full"></div>
-                    <div class="performance-legend">
-                        <h4 class="font-medium mb-2">Performance Legend</h4>
-                        <div class="flex items-center mb-1">
-                            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                            <span class="text-xs">High Performance (>$40K)</span>
+
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400">Avg. Daily Customers</p>
+                                <h3 class="text-2xl font-bold">342</h3>
+                                <p class="text-xs text-red-400 mt-1"><i class="fas fa-arrow-down mr-1"></i> 3% from last
+                                    month</p>
+                            </div>
+                            <div
+                                class="w-12 h-12 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center">
+                                <i class="fas fa-users text-purple-400"></i>
+                            </div>
                         </div>
-                        <div class="flex items-center mb-1">
-                            <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                            <span class="text-xs">Medium Performance ($20K-$40K)</span>
-                        </div>
-                        <div class="flex items-center">
-                            <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                            <span class="text-xs">Low Performance (<$20K)</span>
+                    </div>
+
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-400">Coverage Area</p>
+                                <h3 class="text-2xl font-bold">5.2 km²</h3>
+                                <p class="text-xs text-emerald-400 mt-1"><i class="fas fa-arrow-up mr-1"></i> 2 new
+                                    areas</p>
+                            </div>
+                            <div
+                                class="w-12 h-12 rounded-full bg-yellow-500 bg-opacity-20 flex items-center justify-center">
+                                <i class="fas fa-map-marked text-yellow-400"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Branch Performance Section -->
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="p-4 border-b border-gray-200">
-                        <h2 class="text-lg font-medium text-gray-900">Branch Performance</h2>
-                        <p class="text-sm text-gray-500">Top 5 branches by revenue</p>
-                    </div>
-                    <div class="p-4">
-                        <div class="space-y-4">
-                            <!-- Top Branch -->
-                            <div class="flex items-start p-3 bg-blue-50 rounded-lg">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                    <i class="fas fa-crown"></i>
-                                </div>
-                                <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">Downtown</h3>
-                                    <div class="flex items-center mt-1">
-                                        <span class="text-lg font-bold text-gray-900">$98,450</span>
-                                        <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 flex items-center">
-                                            <i class="fas fa-arrow-up mr-1"></i> 18%
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center mt-1 text-xs text-gray-500">
-                                        <i class="fas fa-users mr-1"></i> 1,240 customers
-                                    </div>
+                <!-- Map and Chart Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Map Section -->
+                    <div class="lg:col-span-2">
+                        <div class="card p-4 h-full">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-medium">Branch Locations</h3>
+                                <div class="flex space-x-2">
+                                    <button
+                                        class="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
+                                        <i class="fas fa-plus mr-1"></i> Add Branch
+                                    </button>
+                                    <button
+                                        class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg flex items-center">
+                                        <i class="fas fa-layer-group mr-1"></i> Layers
+                                    </button>
                                 </div>
                             </div>
-                            
-                            <!-- Other Branches -->
-                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                    <span>2</span>
-                                </div>
-                                <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">Riverside</h3>
-                                    <div class="flex items-center mt-1">
-                                        <span class="text-lg font-bold text-gray-900">$76,210</span>
-                                        <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 flex items-center">
-                                            <i class="fas fa-arrow-up mr-1"></i> 12%
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center mt-1 text-xs text-gray-500">
-                                        <i class="fas fa-users mr-1"></i> 980 customers
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
-                                    <span>3</span>
-                                </div>
-                                <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">Hillside</h3>
-                                    <div class="flex items-center mt-1">
-                                        <span class="text-lg font-bold text-gray-900">$65,780</span>
-                                        <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 flex items-center">
-                                            <i class="fas fa-arrow-up mr-1"></i> 8%
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center mt-1 text-xs text-gray-500">
-                                        <i class="fas fa-users mr-1"></i> 870 customers
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
-                                    <span>4</span>
-                                </div>
-                                <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">West End</h3>
-                                    <div class="flex items-center mt-1">
-                                        <span class="text-lg font-bold text-gray-900">$52,340</span>
-                                        <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800 flex items-center">
-                                            <i class="fas fa-arrow-down mr-1"></i> 3%
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center mt-1 text-xs text-gray-500">
-                                        <i class="fas fa-users mr-1"></i> 720 customers
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-start p-3 hover:bg-gray-50 rounded-lg">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600">
-                                    <span>5</span>
-                                </div>
-                                <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">North Park</h3>
-                                    <div class="flex items-center mt-1">
-                                        <span class="text-lg font-bold text-gray-900">$48,560</span>
-                                        <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 flex items-center">
-                                            <i class="fas fa-arrow-up mr-1"></i> 5%
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center mt-1 text-xs text-gray-500">
-                                        <i class="fas fa-users mr-1"></i> 650 customers
-                                    </div>
-                                </div>
+                            <div class="h-96 relative">
+                                <div id="map"></div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Charts Section -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <!-- Revenue Trend Chart -->
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="p-4 border-b border-gray-200">
-                        <h2 class="text-lg font-medium text-gray-900">Revenue Trend (Last 6 Months)</h2>
-                    </div>
-                    <div class="p-4">
-                        <div class="chart-container">
-                            <canvas id="revenueChart"></canvas>
+                    <!-- Performance Chart -->
+                    <div>
+                        <div class="card p-4 h-full">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-medium">Top Performing Branches</h3>
+                                <select class="input-field text-xs px-2 py-1 rounded-lg focus:outline-none">
+                                    <option>This Month</option>
+                                    <option>Last Month</option>
+                                    <option>This Quarter</option>
+                                </select>
+                            </div>
+                            <div class="h-96">
+                                <canvas id="performanceChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Customer Traffic Chart -->
-                <div class="bg-white rounded-lg shadow overflow-hidden">
-                    <div class="p-4 border-b border-gray-200">
-                        <h2 class="text-lg font-medium text-gray-900">Customer Traffic by Branch</h2>
+
+                <!-- Branch List -->
+                <div class="card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-medium">All Branches</h3>
+                        <div class="flex space-x-2">
+                            <button
+                                class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg flex items-center">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                            <button
+                                class="text-xs bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded-lg flex items-center">
+                                <i class="fas fa-download mr-1"></i> Export
+                            </button>
+                        </div>
                     </div>
-                    <div class="p-4">
-                        <div class="chart-container">
-                            <canvas id="trafficChart"></canvas>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-700">
+                            <thead>
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Branch</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Location</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Revenue</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Customers</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Status</th>
+                                    <th
+                                        class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-800">
+                                <tr class="table-row">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div
+                                                class="flex-shrink-0 h-10 w-10 bg-emerald-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-store text-emerald-400"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="font-medium">Downtown Cafe</div>
+                                                <div class="text-xs text-gray-400">#BR-001</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">Main Street</div>
+                                        <div class="text-xs text-gray-400">1.2km radius</div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">$15,230</div>
+                                        <div class="text-xs text-emerald-400"><i class="fas fa-arrow-up mr-1"></i> 12%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">428</div>
+                                        <div class="text-xs text-emerald-400"><i class="fas fa-arrow-up mr-1"></i> 8%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-2 py-1 text-xs rounded-full bg-emerald-500 bg-opacity-20 text-emerald-400">Active</span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                        <button class="text-blue-400 hover:text-blue-300 mr-3">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-400 hover:text-red-300">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="table-row">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div
+                                                class="flex-shrink-0 h-10 w-10 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-store text-blue-400"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="font-medium">Riverside Bistro</div>
+                                                <div class="text-xs text-gray-400">#BR-002</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">River Road</div>
+                                        <div class="text-xs text-gray-400">0.8km radius</div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">$12,450</div>
+                                        <div class="text-xs text-emerald-400"><i class="fas fa-arrow-up mr-1"></i> 5%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">387</div>
+                                        <div class="text-xs text-emerald-400"><i class="fas fa-arrow-up mr-1"></i> 3%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-2 py-1 text-xs rounded-full bg-emerald-500 bg-opacity-20 text-emerald-400">Active</span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                        <button class="text-blue-400 hover:text-blue-300 mr-3">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-400 hover:text-red-300">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="table-row">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div
+                                                class="flex-shrink-0 h-10 w-10 bg-purple-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-store text-purple-400"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="font-medium">Hillside Restaurant</div>
+                                                <div class="text-xs text-gray-400">#BR-003</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">Hilltop Avenue</div>
+                                        <div class="text-xs text-gray-400">1.5km radius</div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">$9,870</div>
+                                        <div class="text-xs text-red-400"><i class="fas fa-arrow-down mr-1"></i> 2%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">298</div>
+                                        <div class="text-xs text-red-400"><i class="fas fa-arrow-down mr-1"></i> 5%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-2 py-1 text-xs rounded-full bg-yellow-500 bg-opacity-20 text-yellow-400">Warning</span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                        <button class="text-blue-400 hover:text-blue-300 mr-3">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-400 hover:text-red-300">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="table-row">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div
+                                                class="flex-shrink-0 h-10 w-10 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-store text-red-400"></i>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="font-medium">Northside Diner</div>
+                                                <div class="text-xs text-gray-400">#BR-004</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">North Boulevard</div>
+                                        <div class="text-xs text-gray-400">1.0km radius</div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">$7,650</div>
+                                        <div class="text-xs text-red-400"><i class="fas fa-arrow-down mr-1"></i> 8%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <div class="text-sm">245</div>
+                                        <div class="text-xs text-red-400"><i class="fas fa-arrow-down mr-1"></i> 12%
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span
+                                            class="px-2 py-1 text-xs rounded-full bg-red-500 bg-opacity-20 text-red-400">Critical</span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                        <button class="text-blue-400 hover:text-blue-300 mr-3">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-400 hover:text-red-300">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="text-sm text-gray-400">Showing 1 to 4 of 24 branches</div>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
+                                Previous
+                            </button>
+                            <button class="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-sm">
+                                1
+                            </button>
+                            <button class="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
+                                2
+                            </button>
+                            <button class="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
+                                3
+                            </button>
+                            <button class="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
+                                Next
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Initialize the map
-        const map = L.map('map').setView([40.7128, -74.0060], 12);
+    <!-- Add Branch Modal (hidden by default) -->
+    <div id="addBranchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="dashboard-container w-full max-w-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">Add New Branch</h3>
+                <button id="closeModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // Sample branch data (in a real app, this would come from an API)
-        const branches = [
-            {
-                id: 1,
-                name: "Downtown",
-                lat: 40.7128,
-                lng: -74.0080,
-                revenue: 98450,
-                customers: 1240,
-                rating: 4.7,
-                trend: "up",
-                manager: "Sarah Johnson",
-                popularItems: ["Signature Burger", "Craft Beer", "Chocolate Lava Cake"]
-            },
-            {
-                id: 2,
-                name: "Riverside",
-                lat: 40.7228,
-                lng: -74.0060,
-                revenue: 76210,
-                customers: 980,
-                rating: 4.5,
-                trend: "up",
-                manager: "Michael Chen",
-                popularItems: ["Fish Tacos", "Margarita", "Churros"]
-            },
-            {
-                id: 3,
-                name: "Hillside",
-                lat: 40.7328,
-                lng: -74.0120,
-                revenue: 65780,
-                customers: 870,
-                rating: 4.3,
-                trend: "up",
-                manager: "David Wilson",
-                popularItems: ["BBQ Ribs", "Iced Tea", "Apple Pie"]
-            },
-            {
-                id: 4,
-                name: "West End",
-                lat: 40.7128,
-                lng: -74.0200,
-                revenue: 52340,
-                customers: 720,
-                rating: 4.1,
-                trend: "down",
-                manager: "Emily Rodriguez",
-                popularItems: ["Caesar Salad", "White Wine", "Tiramisu"]
-            },
-            {
-                id: 5,
-                name: "North Park",
-                lat: 40.7028,
-                lng: -74.0100,
-                revenue: 48560,
-                customers: 650,
-                rating: 4.0,
-                trend: "up",
-                manager: "James Smith",
-                popularItems: ["Pasta Carbonara", "Red Wine", "Cheesecake"]
-            },
-            {
-                id: 6,
-                name: "East Village",
-                lat: 40.7028,
-                lng: -74.0020,
-                revenue: 38920,
-                customers: 540,
-                rating: 3.9,
-                trend: "neutral",
-                manager: "Lisa Brown",
-                popularItems: ["Vegan Bowl", "Smoothie", "Fruit Tart"]
-            }
-        ];
-
-        // Add markers for each branch
-        branches.forEach(branch => {
-            // Determine marker color based on performance
-            let markerColor;
-            if (branch.revenue > 40000) {
-                markerColor = 'bg-green-500';
-            } else if (branch.revenue > 20000) {
-                markerColor = 'bg-yellow-500';
-            } else {
-                markerColor = 'bg-red-500';
-            }
-
-            // Create custom marker
-            const marker = L.marker([branch.lat, branch.lng], {
-                icon: L.divIcon({
-                    html: `<div class="branch-marker ${markerColor}">${branch.id}</div>`,
-                    className: 'dummy'
-                })
-            }).addTo(map);
-
-            // Create popup content
-            const popupContent = `
-                <div class="custom-popup">
-                    <h3>${branch.name}</h3>
-                    <div class="metrics">
-                        <div class="metric">
-                            <div class="label text-xs text-gray-500">Revenue</div>
-                            <div class="value">$${branch.revenue.toLocaleString()}</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label text-xs text-gray-500">Customers</div>
-                            <div class="value">${branch.customers.toLocaleString()}</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label text-xs text-gray-500">Rating</div>
-                            <div class="value">${branch.rating}/5</div>
-                        </div>
-                        <div class="metric">
-                            <div class="label text-xs text-gray-500">Trend</div>
-                            <div class="value">
-                                ${branch.trend === 'up' ? 
-                                    '<span class="trend-up"><i class="fas fa-arrow-up"></i> Up</span>' : 
-                                    branch.trend === 'down' ? 
-                                    '<span class="trend-down"><i class="fas fa-arrow-down"></i> Down</span>' : 
-                                    '<span class="trend-neutral"><i class="fas fa-minus"></i> Stable</span>'}
-                            </div>
-                        </div>
+            <form class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Branch Name</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg">
                     </div>
-                    <div class="mt-2">
-                        <p class="text-sm"><strong>Manager:</strong> ${branch.manager}</p>
-                        <p class="text-sm mt-1"><strong>Popular Items:</strong> ${branch.popularItems.join(', ')}</p>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Branch Code</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg" placeholder="BR-XXX">
                     </div>
                 </div>
-            `;
 
-            // Bind popup to marker
-            marker.bindPopup(popupContent);
-        });
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Address</label>
+                    <input type="text" class="input-field w-full px-4 py-2 rounded-lg">
+                </div>
 
-        // Initialize charts
-        document.addEventListener('DOMContentLoaded', function() {
-            // Revenue Trend Chart
-            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-            const revenueChart = new Chart(revenueCtx, {
-                type: 'line',
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Latitude</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg" placeholder="e.g. 40.7128">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Longitude</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg" placeholder="e.g. -74.0060">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Coverage Radius (km)</label>
+                        <input type="number" class="input-field w-full px-4 py-2 rounded-lg" placeholder="1.5">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Manager</label>
+                        <select class="input-field w-full px-4 py-2 rounded-lg">
+                            <option>Select Manager</option>
+                            <option>John Smith</option>
+                            <option>Sarah Johnson</option>
+                            <option>Michael Brown</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Status</label>
+                        <select class="input-field w-full px-4 py-2 rounded-lg">
+                            <option>Active</option>
+                            <option>Inactive</option>
+                            <option>Under Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Description</label>
+                    <textarea class="input-field w-full px-4 py-2 rounded-lg" rows="3"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelAdd" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center">
+                        <i class="fas fa-save mr-2"></i> Save Branch
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Leaflet Map
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize map
+            const map = L.map('map').setView([40.7128, -74.0060], 12);
+
+            // Add tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 18,
+            }).addTo(map);
+
+            // Sample branch data with performance indicators
+            const branches = [
+                {
+                    name: "Downtown Cafe",
+                    lat: 40.7128,
+                    lng: -74.0060,
+                    revenue: 15230,
+                    customers: 428,
+                    status: "active",
+                    radius: 1200 // in meters
+                },
+                {
+                    name: "Riverside Bistro",
+                    lat: 40.7228,
+                    lng: -74.0160,
+                    revenue: 12450,
+                    customers: 387,
+                    status: "active",
+                    radius: 800
+                },
+                {
+                    name: "Hillside Restaurant",
+                    lat: 40.7028,
+                    lng: -74.0260,
+                    revenue: 9870,
+                    customers: 298,
+                    status: "warning",
+                    radius: 1500
+                },
+                {
+                    name: "Northside Diner",
+                    lat: 40.7328,
+                    lng: -74.0360,
+                    revenue: 7650,
+                    customers: 245,
+                    status: "critical",
+                    radius: 1000
+                }
+            ];
+
+            // Add branch markers with circles showing coverage area
+            branches.forEach(branch => {
+                // Determine marker color based on status
+                let markerColor;
+                if (branch.status === "active") markerColor = "#10B981";
+                else if (branch.status === "warning") markerColor = "#F59E0B";
+                else markerColor = "#EF4444";
+
+                // Create marker with custom icon
+                const marker = L.marker([branch.lat, branch.lng], {
+                    icon: L.divIcon({
+                        html: `<div style="color: ${markerColor}; font-size: 24px;"><i class="fas fa-map-marker-alt"></i></div>`,
+                        className: 'map-marker-icon',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 24]
+                    })
+                }).addTo(map);
+
+                // Add circle for coverage area
+                L.circle([branch.lat, branch.lng], {
+                    color: markerColor,
+                    fillColor: markerColor,
+                    fillOpacity: 0.2,
+                    radius: branch.radius
+                }).addTo(map);
+
+                // Add popup with branch info
+                marker.bindPopup(`
+                    <div class="text-white">
+                        <h3 class="font-bold mb-1">${branch.name}</h3>
+                        <div class="text-sm mb-2">Revenue: $${branch.revenue.toLocaleString()}</div>
+                        <div class="text-sm mb-2">Customers: ${branch.customers}</div>
+                        <div class="text-xs ${branch.status === "active" ? "text-emerald-400" : branch.status === "warning" ? "text-yellow-400" : "text-red-400"}">
+                            ${branch.status === "active" ? "Active" : branch.status === "warning" ? "Needs Attention" : "Critical"}
+                        </div>
+                    </div>
+                `);
+            });
+
+            // Initialize Performance Chart
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const performanceChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    labels: branches.map(b => b.name),
                     datasets: [
                         {
-                            label: 'Downtown',
-                            data: [72000, 85000, 78000, 92000, 95000, 98450],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.3,
-                            fill: true
-                        },
-                        {
-                            label: 'Riverside',
-                            data: [65000, 68000, 71000, 73000, 75000, 76210],
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.3,
-                            fill: true
-                        },
-                        {
-                            label: 'Hillside',
-                            data: [58000, 60000, 62000, 64000, 65000, 65780],
-                            borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            tension: 0.3,
-                            fill: true
+                            label: 'Revenue',
+                            data: branches.map(b => b.revenue),
+                            backgroundColor: [
+                                'rgba(16, 185, 129, 0.7)',
+                                'rgba(59, 130, 246, 0.7)',
+                                'rgba(245, 158, 11, 0.7)',
+                                'rgba(239, 68, 68, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(239, 68, 68, 1)'
+                            ],
+                            borderWidth: 1
                         }
                     ]
                 },
@@ -511,18 +730,40 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'top',
+                            display: false
                         },
                         tooltip: {
-                            mode: 'index',
-                            intersect: false,
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (context) {
+                                    return `Revenue: $${context.raw.toLocaleString()}`;
+                                }
+                            }
                         }
                     },
                     scales: {
-                        y: {
-                            beginAtZero: false,
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
                             ticks: {
-                                callback: function(value) {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                callback: function (value) {
                                     return '$' + value.toLocaleString();
                                 }
                             }
@@ -531,62 +772,41 @@
                 }
             });
 
-            // Customer Traffic Chart
-            const trafficCtx = document.getElementById('trafficChart').getContext('2d');
-            const trafficChart = new Chart(trafficCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Downtown', 'Riverside', 'Hillside', 'West End', 'North Park', 'East Village'],
-                    datasets: [{
-                        label: 'Customer Traffic',
-                        data: [1240, 980, 870, 720, 650, 540],
-                        backgroundColor: [
-                            'rgba(59, 130, 246, 0.7)',
-                            'rgba(16, 185, 129, 0.7)',
-                            'rgba(245, 158, 11, 0.7)',
-                            'rgba(156, 163, 175, 0.7)',
-                            'rgba(156, 163, 175, 0.7)',
-                            'rgba(156, 163, 175, 0.7)'
-                        ],
-                        borderColor: [
-                            'rgba(59, 130, 246, 1)',
-                            'rgba(16, 185, 129, 1)',
-                            'rgba(245, 158, 11, 1)',
-                            'rgba(156, 163, 175, 1)',
-                            'rgba(156, 163, 175, 1)',
-                            'rgba(156, 163, 175, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false,
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.parsed.y.toLocaleString() + ' customers';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString();
-                                }
-                            }
-                        }
-                    }
+            // Modal handling
+            const addBranchModal = document.getElementById('addBranchModal');
+            const closeModal = document.getElementById('closeModal');
+            const cancelAdd = document.getElementById('cancelAdd');
+
+            // Show modal when "Add Branch" button is clicked
+            document.querySelector('button:contains("Add Branch")').addEventListener('click', function () {
+                addBranchModal.classList.remove('hidden');
+            });
+
+            // Close modal
+            closeModal.addEventListener('click', function () {
+                addBranchModal.classList.add('hidden');
+            });
+
+            cancelAdd.addEventListener('click', function () {
+                addBranchModal.classList.add('hidden');
+            });
+
+            // Close modal when clicking outside
+            addBranchModal.addEventListener('click', function (e) {
+                if (e.target === addBranchModal) {
+                    addBranchModal.classList.add('hidden');
                 }
+            });
+
+            // Sidebar toggle for mobile
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+
+            sidebarToggle.addEventListener('click', function () {
+                sidebar.classList.toggle('hidden');
             });
         });
     </script>
 </body>
+
 </html>
