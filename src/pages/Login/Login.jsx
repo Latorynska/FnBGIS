@@ -66,8 +66,8 @@ const Login = () => {
               <i className="fas fa-map-marked-alt text-white text-2xl"></i>
             </div>
           </div>
-          <h1 className="text-3xl font-bold mb-1">GeoDine</h1>
-          <p className="text-gray-300">GIS Food & Beverage Mapping Platform</p>
+          <h1 className="text-3xl font-bold mb-1">FnBGIS</h1>
+          <p className="text-gray-300">FnB's Performance Mapping Platform</p>
         </div>
 
         <form className="space-y-6">
