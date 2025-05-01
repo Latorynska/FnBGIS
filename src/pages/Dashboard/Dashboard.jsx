@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import Chart from 'chart.js/auto';
 import 'leaflet/dist/leaflet.css';
 import RevenueChart from '../../charts/RevenueChart';
 import TrafficChart from '../../charts/TrafficChart';
@@ -7,55 +8,114 @@ import './dashboard.css';
 import StatisticCard from '../../components/StatisticCard/StatisticCard';
 import Pill from '../../components/Pill/Pill';
 
-const Dashboard = () => {
-    const mapRef = useRef(null);
 
+
+const Dashboard = () => {
+    const branches = [
+        {
+            name: "Downtown Cafe",
+            lat: -6.9175, // Bandung
+            lng: 107.6191,
+            revenue: 15230,
+            customers: 428,
+            status: "active",
+            radius: 1200
+        },
+        {
+            name: "Riverside Bistro",
+            lat: -6.9005, // Bogor
+            lng: 106.7980,
+            revenue: 12450,
+            customers: 387,
+            status: "active",
+            radius: 800
+        },
+        {
+            name: "Hillside Restaurant",
+            lat: -6.8726, // Depok
+            lng: 106.8230,
+            revenue: 9870,
+            customers: 298,
+            status: "warning",
+            radius: 1500
+        },
+        {
+            name: "Northside Diner",
+            lat: -7.2504, // Cirebon
+            lng: 108.5696,
+            revenue: 7650,
+            customers: 245,
+            status: "critical",
+            radius: 1000
+        },
+        {
+            name: "Coastal Grill",
+            lat: -6.9744, // Pangandaran
+            lng: 108.6902,
+            revenue: 13250,
+            customers: 540,
+            status: "active",
+            radius: 1500
+        },
+        {
+            name: "Mountain View Eatery",
+            lat: -7.0917, // Garut
+            lng: 107.9483,
+            revenue: 11340,
+            customers: 410,
+            status: "active",
+            radius: 1100
+        },
+        {
+            name: "City Lights Cafe",
+            lat: -6.9082, // Cimahi
+            lng: 107.6037,
+            revenue: 10720,
+            customers: 315,
+            status: "warning",
+            radius: 900
+        },
+        {
+            name: "Lakeside Bistro",
+            lat: -7.2089, // Tasikmalaya
+            lng: 108.2183,
+            revenue: 8760,
+            customers: 220,
+            status: "critical",
+            radius: 1300
+        },
+        {
+            name: "Sunset Bar & Grill",
+            lat: -6.7953, // Sukabumi
+            lng: 106.9287,
+            revenue: 14230,
+            customers: 520,
+            status: "active",
+            radius: 1400
+        },
+        {
+            name: "Riverbend Cafe",
+            lat: -6.9267, // Bekasi
+            lng: 107.0153,
+            revenue: 15780,
+            customers: 460,
+            status: "active",
+            radius: 1100
+        }
+    ];
+    const mapRef = useRef(null);
+    const chartRef = useRef(null);
+    const chartInstanceRef = useRef(null);
+    // mapping data kedalam map leaflet
     useEffect(() => {
         if (mapRef.current && !mapRef.current._leaflet_map_instance) {
-            const map = L.map(mapRef.current).setView([40.7128, -74.0060], 12);
+            const map = L.map(mapRef.current).setView([-6.9175, 107.6191], 12);
             mapRef.current._leaflet_map_instance = map;
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
-            const branches = [
-                {
-                    name: "Downtown Cafe",
-                    lat: 40.7128,
-                    lng: -74.0060,
-                    revenue: 15230,
-                    customers: 428,
-                    status: "active",
-                    radius: 1200 // in meters
-                },
-                {
-                    name: "Riverside Bistro",
-                    lat: 40.7228,
-                    lng: -74.0160,
-                    revenue: 12450,
-                    customers: 387,
-                    status: "active",
-                    radius: 800
-                },
-                {
-                    name: "Hillside Restaurant",
-                    lat: 40.7028,
-                    lng: -74.0260,
-                    revenue: 9870,
-                    customers: 298,
-                    status: "warning",
-                    radius: 1500
-                },
-                {
-                    name: "Northside Diner",
-                    lat: 40.7328,
-                    lng: -74.0360,
-                    revenue: 7650,
-                    customers: 245,
-                    status: "critical",
-                    radius: 1000
-                }
-            ];
+
             branches.forEach(branch => {
                 // Determine marker color based on status
                 let markerColor;
@@ -94,7 +154,91 @@ const Dashboard = () => {
             `);
             });
         }
+
     }, []);
+    // mapping data ke chart performa cabang
+    useEffect(() => {
+        const ctx = chartRef.current.getContext('2d');
+        if (chartInstanceRef.current) {
+            chartInstanceRef.current.destroy();
+        }
+
+        chartInstanceRef.current = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: branches.map(b => b.name),
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: branches.map(b => b.revenue),
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.7)',
+                            'rgba(59, 130, 246, 0.7)',
+                            'rgba(245, 158, 11, 0.7)',
+                            'rgba(239, 68, 68, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        displayColors: false,
+                        callbacks: {
+                            label: function (context) {
+                                return `Revenue: $${context.raw.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            callback: function (value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        return () => {
+            if (chartInstanceRef.current) {
+                chartInstanceRef.current.destroy();
+            }
+        };
+    }, [branches]);
 
     return (
         <>
@@ -165,7 +309,7 @@ const Dashboard = () => {
                             </select>
                         </div>
                         <div className="h-96">
-                            <canvas id="performanceChart"></canvas>
+                            <canvas id="performanceChart" ref={chartRef}></canvas>
                         </div>
                     </div>
                 </div>
@@ -200,7 +344,7 @@ const Dashboard = () => {
                             <tr className="table-row">
                                 <td className="px-4 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-emerald-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
                                             <i className="fas fa-store text-emerald-400"></i>
                                         </div>
                                         <div className="ml-4">
@@ -236,7 +380,7 @@ const Dashboard = () => {
                             <tr className="table-row">
                                 <td className="px-4 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <div className="flex-shrink-0 h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center">
                                             <i className="fas fa-store text-blue-400"></i>
                                         </div>
                                         <div className="ml-4">
@@ -272,7 +416,7 @@ const Dashboard = () => {
                             <tr className="table-row">
                                 <td className="px-4 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-purple-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <div className="flex-shrink-0 h-10 w-10 bg-purple-500/20 rounded-full flex items-center justify-center">
                                             <i className="fas fa-store text-purple-400"></i>
                                         </div>
                                         <div className="ml-4">
@@ -308,7 +452,7 @@ const Dashboard = () => {
                             <tr className="table-row">
                                 <td className="px-4 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                        <div className="flex-shrink-0 h-10 w-10 bg-red-500/20 rounded-full flex items-center justify-center">
                                             <i className="fas fa-store text-red-400"></i>
                                         </div>
                                         <div className="ml-4">
