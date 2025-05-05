@@ -1,0 +1,22 @@
+/* Modal transition */
+.modal {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.modal.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+.modal:not(.hidden) {
+    opacity: 1;
+    transform: translateY(0);
+}
+.modal-container {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
