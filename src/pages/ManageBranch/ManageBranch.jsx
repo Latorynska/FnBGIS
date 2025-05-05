@@ -157,11 +157,16 @@ const initialBranches = [
       [-6.9272, 107.0138],
       [-6.9262, 107.0133]
     ]
+  },
+  {
+    name: "Ngopi Cafe",
+    revenue: 15780,
+    customers: 460,
+    status: "active",
   }
 ];
 const ManageBranch = () => {
   const [branches, setBranches] = useState(initialBranches);
-  const [branchesWithAddress, setBranchesWithAddress] = useState([]);
   const [newPolygon, setNewPolygon] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
@@ -194,14 +199,30 @@ const ManageBranch = () => {
     });
 
     branches.forEach((branch) => {
-      const color = branch.status === 'active' ? '#10B981' : branch.status === 'warning' ? '#F59E0B' : '#EF4444';
+      const hasCoordinates =
+        typeof branch.lat === 'number' && typeof branch.lng === 'number';
+      const hasArea =
+        Array.isArray(branch.area) &&
+        branch.area.length > 0 &&
+        Array.isArray(branch.area[0]) &&
+        typeof branch.area[0][0] === 'number' &&
+        typeof branch.area[0][1] === 'number';
+      if (!hasCoordinates) return;
+
+      const color =
+        branch.status === 'active'
+          ? '#10B981'
+          : branch.status === 'warning'
+            ? '#F59E0B'
+            : '#EF4444';
+
       const popupContent = `
         <div>
           <h3 class="font-bold mb-1">${branch.name}</h3>
-          <div class="text-sm">Revenue: $${branch.revenue.toLocaleString()}</div>
-          <div class="text-sm">Customers: ${branch.customers}</div>
-        </div>`;
-
+          <div class="text-sm">Revenue: $${branch.revenue?.toLocaleString?.() || 0}</div>
+          <div class="text-sm">Customers: ${branch.customers ?? 0}</div>
+        </div>
+      `;
       const marker = L.marker([branch.lat, branch.lng], {
         icon: L.divIcon({
           html: `<div style="color: ${color}; font-size: 24px;"><i class="fas fa-map-marker-alt"></i></div>`,
@@ -212,7 +233,7 @@ const ManageBranch = () => {
       }).addTo(map);
       marker.bindPopup(popupContent);
 
-      if (branch.area?.length) {
+      if (hasArea) {
         const polygon = L.polygon(branch.area, {
           color,
           fillColor: color,
@@ -221,10 +242,15 @@ const ManageBranch = () => {
         }).addTo(map);
 
         polygon.bindPopup(popupContent);
-        polygon.on('mouseover', () => polygon.setStyle({ weight: 4, fillOpacity: 0.3 }));
-        polygon.on('mouseout', () => polygon.setStyle({ weight: 2, fillOpacity: 0.2 }));
+        polygon.on('mouseover', () =>
+          polygon.setStyle({ weight: 4, fillOpacity: 0.3 })
+        );
+        polygon.on('mouseout', () =>
+          polygon.setStyle({ weight: 2, fillOpacity: 0.2 })
+        );
       }
     });
+
 
     map.on('draw:created', function (event) {
       const layer = event.layer;
@@ -267,6 +293,31 @@ const ManageBranch = () => {
     setShowModal(false);
   };
 
+  const handleAddPoint = (branch) => {
+    // Aktifkan draw marker mode khusus untuk branch ini
+  };
+
+  const handleEditPoint = (branch) => {
+    // Biarkan user geser marker dan simpan posisi baru
+  };
+
+  const handleDeletePoint = (branch) => {
+    // Hapus lat/lng dari branch ini
+  };
+
+  const handleAddArea = (branch) => {
+    // Aktifkan draw polygon mode untuk branch ini
+  };
+
+  const handleEditArea = (branch) => {
+    // Aktifkan edit polygon mode
+  };
+
+  const handleDeleteArea = (branch) => {
+    // Kosongkan area dari branch ini
+  };
+
+
   const getStatusText = (status) => {
     return status === 'active' ? 'Active' : status === 'warning' ? 'Needs Attention' : 'Critical';
   };
@@ -299,31 +350,37 @@ const ManageBranch = () => {
                 Tambah Area Cabang
               </Button>
             </div>
-            <div className="space-y-2 max-h-96 overflow-y-auto mt-4">
-              {branches.map((branch) => (
-                <div
-                  key={branch.id}
-                  className="p-3 rounded-lg bg-gray-800 hover:bg-gray-700 cursor-pointer"
-                >
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium">{branch.name}</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${branch.status === 'active'
-                      ? 'bg-emerald-500'
-                      : branch.status === 'warning'
-                        ? 'bg-yellow-500'
-                        : 'bg-red-500'
-                      }`}>
-                      {getStatusText(branch.status)}
-                    </span>
+            <div className="space-y-2 max-h-96 overflow-y-auto mt-4 scrollbar-custom">
+              {branches.map((branch) => {
+                const hasCoordinates = typeof branch.lat === "number" && typeof branch.lng === "number";
+                const hasArea = Array.isArray(branch.area) && branch.area.length > 0 && Array.isArray(branch.area[0]) && typeof branch.area[0][0] === "number" && typeof branch.area[0][1] === "number";
+
+                return (
+                  <div key={branch.id} className="p-4 rounded-lg bg-gray-800 hover:bg-gray-700 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium">{branch.name}</h4>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${branch.status === "active"
+                          ? "bg-emerald-500"
+                          : branch.status === "warning"
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                          }`}
+                      >
+                        {getStatusText(branch.status)}
+                      </span>
+                    </div>
+
+                    <div className="text-sm text-gray-400">
+                      Customers: {branch.customers} | Revenue: ${branch.revenue?.toLocaleString() || 0}
+                    </div>
+
+                    <div className="text-xs text-gray-500">
+                      {hasArea ? branch.area.length : 0} polygon points
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-400 mt-1">
-                    Customers: {branch.customers} | Revenue: ${branch.revenue.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {branch.area?.length || 0} polygon points
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -372,53 +429,92 @@ const ManageBranch = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Revenue</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customers</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Titik Lokasi</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Area Lokasi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800">
-              {branches.map((branch) => (
-                <tr className="table-row" key={branch.name}>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                        <i className="fas fa-store text-emerald-400"></i>
-                      </div>
-                      <div className="ml-4">
-                        <div className="font-medium">{branch.name}</div>
-                        <div className="text-xs text-gray-400">{branch.address}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm">Main Street</div>
-                    <div className="text-xs text-gray-400">1.2km radius</div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm">${branch.revenue.toLocaleString()}</div>
-                    <div className="text-xs text-emerald-400">
-                      <i className="fas fa-arrow-up mr-1"></i> 12%
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="text-sm">{branch.customers}</div>
-                    <div className="text-xs text-emerald-400">
-                      <i className="fas fa-arrow-up mr-1"></i> 8%
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <Pill status={branch.status} />
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                      <i className="fas fa-edit"></i>
-                    </button>
-                    <button className="text-red-400 hover:text-red-300">
-                      <i className="fas fa-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {branches.map((branch) => {
 
+                const hasCoordinates = typeof branch.lat === "number" && typeof branch.lng === "number";
+                const hasArea = Array.isArray(branch.area) && branch.area.length > 0 && Array.isArray(branch.area[0]) && typeof branch.area[0][0] === "number" && typeof branch.area[0][1] === "number";
+
+                return (
+                  <tr className="table-row" key={branch.name}>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                          <i className="fas fa-store text-emerald-400"></i>
+                        </div>
+                        <div className="ml-4">
+                          <div className="font-medium">{branch.name}</div>
+                          <div className="text-xs text-gray-400">{branch.address}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm">Main Street</div>
+                      <div className="text-xs text-gray-400">1.2km radius</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm">${branch.revenue.toLocaleString()}</div>
+                      <div className="text-xs text-emerald-400">
+                        <i className="fas fa-arrow-up mr-1"></i> 12%
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm">{branch.customers}</div>
+                      <div className="text-xs text-emerald-400">
+                        <i className="fas fa-arrow-up mr-1"></i> 8%
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <Pill status={branch.status} />
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
+                      <div className="flex justify-around">
+                        <div className="space-y-1">
+                          {!hasCoordinates ? (
+                            <Button variant="primary" className="w-full items-center justify-center" onClick={() => handleAddPoint()}>
+                              Tambah Titik
+                            </Button>
+                          ) : (
+                            <>
+                              <Button variant="warning" className="w-full items-center justify-center" onClick={() => handleEditPoint(branch)}>
+                                Edit Titik
+                              </Button>
+                              <Button variant="danger" className="w-full items-center justify-center" onClick={() => handleDeletePoint(branch)}>
+                                Hapus Titik
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
+                      {/* Action Buttons */}
+                      <div className="flex justify-around">
+                        <div className="space-y-1">
+                          {!hasArea ? (
+                            <Button variant="primary" className="w-full items-center justify-center" onClick={() => handleAddArea(branch)}>
+                              Tambah Area
+                            </Button>
+                          ) : (
+                            <>
+                              <Button variant="warning" className="w-full items-center justify-center" onClick={() => handleEditArea(branch)}>
+                                Edit Area
+                              </Button>
+                              <Button variant="danger" className="w-full items-center justify-center" onClick={() => handleDeleteArea(branch)}>
+                                Hapus Area
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
               <tr className="table-row">
                 <td className="px-4 py-4 whitespace-nowrap">
                   <div className="flex items-center">
