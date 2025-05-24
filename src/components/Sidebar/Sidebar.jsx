@@ -18,9 +18,13 @@ const Sidebar = () => {
                     <i className="fas fa-tachometer-alt w-5 text-center text-emerald-400"></i>
                     <span>Dashboard</span>
                 </Link>
-                <Link to="manage-branch" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch') ? 'active-sidebar-item' : ''}`}>
+                <Link to="manage-branch-area" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-area') ? 'active-sidebar-item' : ''}`}>
+                    <i className="fas fa-map-marked w-5 text-center text-yellow-400"></i>
+                    <span>Area Cabang</span>
+                </Link>
+                <Link to="manage-branch-data" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-data') ? 'active-sidebar-item' : ''}`}>
                     <i className="fas fa-store w-5 text-center text-blue-400"></i>
-                    <span>Cabang</span>
+                    <span>Data Cabang</span>
                 </Link>
                 <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
                     <i className="fas fa-chart-line w-5 text-center text-purple-400"></i>
