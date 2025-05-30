@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "../../components/Button/Button";
 import Pill from "../../components/Pill/Pill";
 import Modal from "../../components/Modal/Modal";
+import Pagination from "../../components/Pagination/Pagination";
 
 const initialBranches = [
     {
@@ -167,6 +168,7 @@ const ManageBranchData = () => {
     const [newBranchName, setNewBranchName] = useState('');
 
     const [branches, setBranches] = useState(initialBranches);
+    const [currentBranchesData, setCurrentBranchesData] = useState([]);
     return (
         <>
             {/* table data list cabang */}
@@ -197,7 +199,7 @@ const ManageBranchData = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-800">
-                            {branches.map((branch) => {
+                            {currentBranchesData.map((branch) => {
 
                                 const hasCoordinates = typeof branch.lat === "number" && typeof branch.lng === "number";
                                 const hasArea = Array.isArray(branch.area) && branch.area.length > 0 && Array.isArray(branch.area[0]) && typeof branch.area[0][0] === "number" && typeof branch.area[0][1] === "number";
@@ -252,7 +254,7 @@ const ManageBranchData = () => {
                                     </tr>
                                 )
                             })}
-                            <tr className="table-row">
+                            {/* <tr className="table-row">
                                 <td className="px-4 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
                                         <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
@@ -395,7 +397,7 @@ const ManageBranchData = () => {
                                         <i className="fas fa-trash"></i>
                                     </button>
                                 </td>
-                            </tr>
+                            </tr> */}
                         </tbody>
                     </table>
                 </div>
@@ -403,7 +405,13 @@ const ManageBranchData = () => {
                 <div className="mt-4 flex items-center justify-between">
                     <div className="text-sm text-gray-400">Showing 1 to 4 of 24 branches</div>
                     <div className="flex space-x-2">
-                        <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
+                        <Pagination 
+                            dataList={branches}
+                            itemsPerPage={5}
+                            setCurrentData={setCurrentBranchesData}
+                            numberingData={true}
+                        />
+                        {/* <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
                             Previous
                         </button>
                         <button className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-sm">
@@ -417,7 +425,7 @@ const ManageBranchData = () => {
                         </button>
                         <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
                             Next
-                        </button>
+                        </button> */}
                     </div>
                 </div>
             </div>
