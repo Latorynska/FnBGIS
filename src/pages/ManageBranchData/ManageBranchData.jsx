@@ -3,6 +3,7 @@ import Button from "../../components/Button/Button";
 import Pill from "../../components/Pill/Pill";
 import Modal from "../../components/Modal/Modal";
 import Pagination from "../../components/Pagination/Pagination";
+import './ManageBranch.css';
 
 const initialBranches = [
     {
@@ -169,11 +170,12 @@ const ManageBranchData = () => {
 
     const [branches, setBranches] = useState(initialBranches);
     const [currentBranchesData, setCurrentBranchesData] = useState([]);
+    const [activeForm, setActiveForm] = useState('details');
     return (
         <>
             {/* table data list cabang */}
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="lg:col-span-2">
                     <div className="card p-4">
                         <div className="flex items-center justify-between mb-4">
@@ -414,7 +416,7 @@ const ManageBranchData = () => {
                                 )}
                             </div>
                             <div className="flex space-x-2">
-                                <Pagination 
+                                <Pagination
                                     dataList={branches}
                                     itemsPerPage={5}
                                     setCurrentData={setCurrentBranchesData}
@@ -424,20 +426,332 @@ const ManageBranchData = () => {
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div className="card p-4 h-full">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-medium">Top Performing Branches</h3>
-                            <select className="input-field text-xs px-2 py-1 rounded-lg focus:outline-none">
-                                <option>This Month</option>
-                                <option>Last Month</option>
-                                <option>This Quarter</option>
-                            </select>
-                        </div>
-                        <div className="h-96">
-                            {/* <canvas id="performanceChart" ref={chartRef}></canvas> */}
-                        </div>
+                {/* form area */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex border-b border-gray-700">
+                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'details' ? 'active' : ''}`} data-tab="details" onClick={()=>setActiveForm('details')}>
+                            <i className="fas fa-info-circle mr-2"></i> Branch Details
+                        </button>
+                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'sales' ? 'active' : ''}`} data-tab="sales" onClick={()=>setActiveForm('sales')}>
+                            <i className="fas fa-chart-line mr-2"></i> Sales Data
+                        </button>
+                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'menu' ? 'active' : ''}`} data-tab="menu" onClick={()=>setActiveForm('menu')}>
+                            <i className="fas fa-utensils mr-2"></i> Menu Items
+                        </button>
                     </div>
+                    {activeForm === 'details' &&(
+                        <div id="details-tab" className="tab-content card p-6">
+                            <h3 className="text-lg font-bold mb-4">Branch Information</h3>
+                            <form className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Branch Name</label>
+                                        <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Branch Code</label>
+                                        <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Address</label>
+                                    <input type="text"  className="input-field w-full px-4 py-2 rounded-lg" />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">City</label>
+                                        <input type="text"  className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">State</label>
+                                        <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Zip Code</label>
+                                        <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Phone Number</label>
+                                        <input type="tel" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Email</label>
+                                        <input type="email" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Manager</label>
+                                        <select className="input-field w-full px-4 py-2 rounded-lg" readOnly>
+                                            <option>John Smith</option>
+                                            <option>Sarah Johnson</option>
+                                            <option>Michael Brown</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Status</label>
+                                        <select className="input-field w-full px-4 py-2 rounded-lg">
+                                            <option>Active</option>
+                                            <option>Inactive</option>
+                                            <option>Under Maintenance</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Description</label>
+                                    <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="3"></textarea>
+                                </div>
+
+                                <div className="flex justify-end space-x-3 pt-4">
+                                    <button type="button" className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center">
+                                        <i className="fas fa-save mr-2"></i> Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+                    {activeForm === 'sales' &&(
+                        <div id="sales-tab" className="tab-content card p-6">
+                            <h3 className="text-lg font-bold mb-4">Sales Data for Downtown Cafe</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div className="card p-4">
+                                    <h4 className="font-medium mb-3">Sales Summary</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Today's Revenue</span>
+                                            <span className="font-medium">$3,245</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Weekly Revenue</span>
+                                            <span className="font-medium">$18,760</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Monthly Revenue</span>
+                                            <span className="font-medium">$72,450</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Avg. Daily Customers</span>
+                                            <span className="font-medium">342</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="card p-4">
+                                    <h4 className="font-medium mb-3">Top Selling Items</h4>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">1. Signature Burger</span>
+                                            <span className="font-medium">428 sold</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">2. Margherita Pizza</span>
+                                            <span className="font-medium">387 sold</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">3. Caesar Salad</span>
+                                            <span className="font-medium">298 sold</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">4. Iced Coffee</span>
+                                            <span className="font-medium">245 sold</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="card p-4 mb-6">
+                                <h4 className="font-medium mb-3">Sales Trend (Last 30 Days)</h4>
+                                <div className="sales-chart-container">
+                                    <canvas id="salesChart"></canvas>
+                                </div>
+                            </div>
+                            <h4 className="font-medium mb-3">Add Sales Record</h4>
+                            <form className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Date</label>
+                                        <input type="date" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Total Revenue</label>
+                                        <input type="number" step="0.01" placeholder="0.00" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm text-gray-400 mb-1">Customer Count</label>
+                                        <input type="number" placeholder="0" className="input-field w-full px-4 py-2 rounded-lg" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Notes</label>
+                                    <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="2" placeholder="Any special events or notes about this day"></textarea>
+                                </div>
+
+                                <div className="flex justify-end space-x-3 pt-4">
+                                    <button type="button" className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 flex items-center">
+                                        <i className="fas fa-plus mr-2"></i> Add Record
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+                    {activeForm === 'menu' &&(
+                        <div id="menu-tab" className="tab-content card p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-bold">Menu Items</h3>
+                                <button className="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
+                                    <i className="fas fa-plus mr-1"></i> Add Item
+                                </button>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-700">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Item</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Category</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Price</th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-800">
+                                        <tr className="table-row">
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="flex-shrink-0 h-10 w-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                                                        <i className="fas fa-hamburger text-yellow-400"></i>
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="font-medium">Signature Burger</div>
+                                                        <div className="text-xs text-gray-400">Beef patty with special sauce</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">Main Course</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">$12.99</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <Pill status={'active'} text={'Available'}/>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                    <i className="fas fa-edit"></i>
+                                                </button>
+                                                <button className="text-red-400 hover:text-red-300">
+                                                    <i className="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr className="table-row">
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="flex-shrink-0 h-10 w-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                                                        <i className="fas fa-pizza-slice text-red-400"></i>
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="font-medium">Margherita Pizza</div>
+                                                        <div className="text-xs text-gray-400">Classic tomato and mozzarella</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">Main Course</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">$14.99</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <Pill status={'active'} text={'Available'}/>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                    <i className="fas fa-edit"></i>
+                                                </button>
+                                                <button className="text-red-400 hover:text-red-300">
+                                                    <i className="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr className="table-row">
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="flex-shrink-0 h-10 w-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                                                        <i className="fas fa-leaf text-green-400"></i>
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="font-medium">Caesar Salad</div>
+                                                        <div className="text-xs text-gray-400">Romaine, croutons, parmesan</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">Salad</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">$9.99</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <Pill status={'active'} text={'Available'}/>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                    <i className="fas fa-edit"></i>
+                                                </button>
+                                                <button className="text-red-400 hover:text-red-300">
+                                                    <i className="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr className="table-row">
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="flex-shrink-0 h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                                        <i className="fas fa-coffee text-blue-400"></i>
+                                                    </div>
+                                                    <div className="ml-4">
+                                                        <div className="font-medium">Iced Coffee</div>
+                                                        <div className="text-xs text-gray-400">Cold brew with milk</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">Beverage</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="text-sm">$4.50</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <Pill status={'critical'} text={'Out of Stock'}/>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                    <i className="fas fa-edit"></i>
+                                                </button>
+                                                <button className="text-red-400 hover:text-red-300">
+                                                    <i className="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

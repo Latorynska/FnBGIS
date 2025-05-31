@@ -1,4 +1,4 @@
-const Pill = ({ status }) => {
+const Pill = ({ status, text }) => {
     const statusStyles = {
         active: {
             label: "Active",
@@ -21,7 +21,7 @@ const Pill = ({ status }) => {
 
     return (
         <span className={`px-2 py-1 text-xs rounded-full font-medium ${className}`}>
-            {label}
+            {text ? text : label}
         </span>
     );
 };
