@@ -172,48 +172,100 @@ const ManageBranchData = () => {
     return (
         <>
             {/* table data list cabang */}
-            <div className="card p-4">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium">All Branches</h3>
-                    <div className="flex space-x-2">
-                        <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => setShowModal(prev => !prev)}
-                        >
-                            Tambah Area Cabang
-                        </Button>
-                        <button className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg flex items-center">
-                            <i className="fas fa-filter mr-1"></i> Filter
-                        </button>
-                    </div>
-                </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <div className="card p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium">All Branches</h3>
+                            <div className="flex space-x-2">
+                                <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => setShowModal(prev => !prev)}
+                                >
+                                    Tambah Area Cabang
+                                </Button>
+                                <button className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg flex items-center">
+                                    <i className="fas fa-filter mr-1"></i> Filter
+                                </button>
+                            </div>
+                        </div>
+                        {/* table content */}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-700">
+                                <thead>
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Branch</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Revenue</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customers</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-800">
+                                    {currentBranchesData.map((branch) => {
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-700">
-                        <thead>
-                            <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Branch</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Revenue</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customers</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-800">
-                            {currentBranchesData.map((branch) => {
+                                        const hasCoordinates = typeof branch.lat === "number" && typeof branch.lng === "number";
+                                        const hasArea = Array.isArray(branch.area) && branch.area.length > 0 && Array.isArray(branch.area[0]) && typeof branch.area[0][0] === "number" && typeof branch.area[0][1] === "number";
 
-                                const hasCoordinates = typeof branch.lat === "number" && typeof branch.lng === "number";
-                                const hasArea = Array.isArray(branch.area) && branch.area.length > 0 && Array.isArray(branch.area[0]) && typeof branch.area[0][0] === "number" && typeof branch.area[0][1] === "number";
-
-                                return (
-                                    <tr className="table-row" key={branch.name}>
+                                        return (
+                                            <tr className="table-row" key={branch.name}>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                                            <i className="fas fa-store text-emerald-400"></i>
+                                                        </div>
+                                                        <div className="ml-4">
+                                                            <div className="font-medium">{branch.name}</div>
+                                                            <div className="text-xs text-gray-400">{branch.address}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <div className="text-sm">Main Street</div>
+                                                    <div className="text-xs text-gray-400">1.2km radius</div>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <div className="text-sm">${branch.revenue.toLocaleString()}</div>
+                                                    <div className="text-xs text-emerald-400">
+                                                        <i className="fas fa-arrow-up mr-1"></i> 12%
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <div className="text-sm">{branch.customers}</div>
+                                                    <div className="text-xs text-emerald-400">
+                                                        <i className="fas fa-arrow-up mr-1"></i> 8%
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    <Pill status={branch.status} />
+                                                </td>
+                                                <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                                    <div className="flex justify-around">
+                                                        <div className="space-y-1">
+                                                            <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                                <i className="fas fa-edit"></i>
+                                                            </button>
+                                                            <button className="text-gray-400 hover:text-gray-300 mr-3">
+                                                                <i className="fas fa-chart-line"></i>
+                                                            </button>
+                                                            <button className="text-red-400 hover:text-red-300">
+                                                                <i className="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                    {/* <tr className="table-row">
                                         <td className="px-4 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
                                                     <i className="fas fa-store text-emerald-400"></i>
                                                 </div>
                                                 <div className="ml-4">
-                                                    <div className="font-medium">{branch.name}</div>
-                                                    <div className="text-xs text-gray-400">{branch.address}</div>
+                                                    <div className="font-medium">Downtown Cafe</div>
+                                                    <div className="text-xs text-gray-400">#BR-001</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -222,213 +274,174 @@ const ManageBranchData = () => {
                                             <div className="text-xs text-gray-400">1.2km radius</div>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap">
-                                            <div className="text-sm">${branch.revenue.toLocaleString()}</div>
-                                            <div className="text-xs text-emerald-400">
-                                                <i className="fas fa-arrow-up mr-1"></i> 12%
-                                            </div>
+                                            <div className="text-sm">$15,230</div>
+                                            <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 12%</div>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap">
-                                            <div className="text-sm">{branch.customers}</div>
-                                            <div className="text-xs text-emerald-400">
-                                                <i className="fas fa-arrow-up mr-1"></i> 8%
-                                            </div>
+                                            <div className="text-sm">428</div>
+                                            <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 8%</div>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap">
-                                            <Pill status={branch.status} />
+                                            <Pill status="active" />
                                         </td>
-                                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
-                                            <div className="flex justify-around">
-                                                <div className="space-y-1">
-                                                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                                        <i className="fas fa-edit"></i>
-                                                    </button>
-                                                    <button className="text-gray-400 hover:text-gray-300 mr-3">
-                                                        <i className="fas fa-chart-line"></i>
-                                                    </button>
-                                                    <button className="text-red-400 hover:text-red-300">
-                                                        <i className="fas fa-trash"></i>
-                                                    </button>
+                                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                            <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                            <button className="text-red-400 hover:text-red-300">
+                                                <i className="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr className="table-row">
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                                    <i className="fas fa-store text-blue-400"></i>
+                                                </div>
+                                                <div className="ml-4">
+                                                    <div className="font-medium">Riverside Bistro</div>
+                                                    <div className="text-xs text-gray-400">#BR-002</div>
                                                 </div>
                                             </div>
                                         </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">River Road</div>
+                                            <div className="text-xs text-gray-400">0.8km radius</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">$12,450</div>
+                                            <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 5%</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">387</div>
+                                            <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 3%</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <Pill status="active" />
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                            <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                            <button className="text-red-400 hover:text-red-300">
+                                                <i className="fas fa-trash"></i>
+                                            </button>
+                                        </td>
                                     </tr>
-                                )
-                            })}
-                            {/* <tr className="table-row">
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
-                                            <i className="fas fa-store text-emerald-400"></i>
-                                        </div>
-                                        <div className="ml-4">
-                                            <div className="font-medium">Downtown Cafe</div>
-                                            <div className="text-xs text-gray-400">#BR-001</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">Main Street</div>
-                                    <div className="text-xs text-gray-400">1.2km radius</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">$15,230</div>
-                                    <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 12%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">428</div>
-                                    <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 8%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <Pill status="active" />
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                        <i className="fas fa-edit"></i>
-                                    </button>
-                                    <button className="text-red-400 hover:text-red-300">
-                                        <i className="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr className="table-row">
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                                            <i className="fas fa-store text-blue-400"></i>
-                                        </div>
-                                        <div className="ml-4">
-                                            <div className="font-medium">Riverside Bistro</div>
-                                            <div className="text-xs text-gray-400">#BR-002</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">River Road</div>
-                                    <div className="text-xs text-gray-400">0.8km radius</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">$12,450</div>
-                                    <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 5%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">387</div>
-                                    <div className="text-xs text-emerald-400"><i className="fas fa-arrow-up mr-1"></i> 3%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <Pill status="active" />
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                        <i className="fas fa-edit"></i>
-                                    </button>
-                                    <button className="text-red-400 hover:text-red-300">
-                                        <i className="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr className="table-row">
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                                            <i className="fas fa-store text-purple-400"></i>
-                                        </div>
-                                        <div className="ml-4">
-                                            <div className="font-medium">Hillside Restaurant</div>
-                                            <div className="text-xs text-gray-400">#BR-003</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">Hilltop Avenue</div>
-                                    <div className="text-xs text-gray-400">1.5km radius</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">$9,870</div>
-                                    <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 2%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">298</div>
-                                    <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 5%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <Pill status="warning" />
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                        <i className="fas fa-edit"></i>
-                                    </button>
-                                    <button className="text-red-400 hover:text-red-300">
-                                        <i className="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr className="table-row">
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                                            <i className="fas fa-store text-red-400"></i>
-                                        </div>
-                                        <div className="ml-4">
-                                            <div className="font-medium">Northside Diner</div>
-                                            <div className="text-xs text-gray-400">#BR-004</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">North Boulevard</div>
-                                    <div className="text-xs text-gray-400">1.0km radius</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">$7,650</div>
-                                    <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 8%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <div className="text-sm">245</div>
-                                    <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 12%</div>
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap">
-                                    <Pill status="critical" />
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                        <i className="fas fa-edit"></i>
-                                    </button>
-                                    <button className="text-red-400 hover:text-red-300">
-                                        <i className="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr> */}
-                        </tbody>
-                    </table>
+                                    <tr className="table-row">
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                                                    <i className="fas fa-store text-purple-400"></i>
+                                                </div>
+                                                <div className="ml-4">
+                                                    <div className="font-medium">Hillside Restaurant</div>
+                                                    <div className="text-xs text-gray-400">#BR-003</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">Hilltop Avenue</div>
+                                            <div className="text-xs text-gray-400">1.5km radius</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">$9,870</div>
+                                            <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 2%</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">298</div>
+                                            <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 5%</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <Pill status="warning" />
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                            <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                            <button className="text-red-400 hover:text-red-300">
+                                                <i className="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr className="table-row">
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                                                    <i className="fas fa-store text-red-400"></i>
+                                                </div>
+                                                <div className="ml-4">
+                                                    <div className="font-medium">Northside Diner</div>
+                                                    <div className="text-xs text-gray-400">#BR-004</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">North Boulevard</div>
+                                            <div className="text-xs text-gray-400">1.0km radius</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">$7,650</div>
+                                            <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 8%</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="text-sm">245</div>
+                                            <div className="text-xs text-red-400"><i className="fas fa-arrow-down mr-1"></i> 12%</div>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <Pill status="critical" />
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
+                                            <button className="text-blue-400 hover:text-blue-300 mr-3">
+                                                <i className="fas fa-edit"></i>
+                                            </button>
+                                            <button className="text-red-400 hover:text-red-300">
+                                                <i className="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr> */}
+                                </tbody>
+                            </table>
+                        </div>
+                        {/* pagination */}
+                        <div className="mt-4 flex items-center justify-between">
+                            <div className="text-sm text-gray-400">
+                                {currentBranchesData.length > 0 ? (
+                                    <>Showing {currentBranchesData[0].number} to {currentBranchesData[currentBranchesData.length - 1].number} of {branches.length} branches</>
+                                ) : (
+                                    <>Showing 0 to 0 of {branches.length} branches</>
+                                )}
+                            </div>
+                            <div className="flex space-x-2">
+                                <Pagination 
+                                    dataList={branches}
+                                    itemsPerPage={5}
+                                    setCurrentData={setCurrentBranchesData}
+                                    numberingData={true}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="mt-4 flex items-center justify-between">
-                    <div className="text-sm text-gray-400">Showing 1 to 4 of 24 branches</div>
-                    <div className="flex space-x-2">
-                        <Pagination 
-                            dataList={branches}
-                            itemsPerPage={5}
-                            setCurrentData={setCurrentBranchesData}
-                            numberingData={true}
-                        />
-                        {/* <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
-                            Previous
-                        </button>
-                        <button className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-sm">
-                            1
-                        </button>
-                        <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
-                            2
-                        </button>
-                        <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
-                            3
-                        </button>
-                        <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">
-                            Next
-                        </button> */}
+                <div>
+                    <div className="card p-4 h-full">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium">Top Performing Branches</h3>
+                            <select className="input-field text-xs px-2 py-1 rounded-lg focus:outline-none">
+                                <option>This Month</option>
+                                <option>Last Month</option>
+                                <option>This Quarter</option>
+                            </select>
+                        </div>
+                        <div className="h-96">
+                            {/* <canvas id="performanceChart" ref={chartRef}></canvas> */}
+                        </div>
                     </div>
                 </div>
             </div>
+
+
             {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Nama Cabang Baru">
                     <div className="space-y-4">

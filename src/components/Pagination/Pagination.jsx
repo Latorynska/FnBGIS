@@ -104,7 +104,7 @@ const Pagination = ({ dataList, itemsPerPage, setCurrentData, numberingData }) =
             {generatePageNumbers().map((pageNumber, index) => (
                 <button
                     key={index}
-                    className={`px-3 py-1 rounded-lg ${currentPage === pageNumber
+                    className={`px-3 mx-1 py-1 rounded-lg ${currentPage === pageNumber
                             ? 'bg-emerald-500 hover:bg-emerald-600 text-sm'
                             : 'bg-gray-700 hover:bg-gray-600 text-sm'
                         }`}
