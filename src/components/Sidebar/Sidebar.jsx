@@ -26,18 +26,19 @@ const Sidebar = () => {
                     <i className="fas fa-store w-5 text-center text-blue-400"></i>
                     <span>Data Cabang</span>
                 </Link>
-                <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                <Link to="manage-brand-information" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-brand-information') ? 'active-sidebar-item' : ''}`}>
+                    {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
+                    <i className="fas fa-trademark w-5 text-center text-red-400"></i>
+                    <span>Brand Data</span>
+                </Link>
+                {/* <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
                     <i className="fas fa-chart-line w-5 text-center text-purple-400"></i>
                     <span>Performance</span>
                 </Link>
                 <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
                     <i className="fas fa-map-marked w-5 text-center text-yellow-400"></i>
                     <span>Coverage Areas</span>
-                </Link>
-                <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
-                    <i className="fas fa-users w-5 text-center text-pink-400"></i>
-                    <span>Customers</span>
-                </Link>
+                </Link> */}
                 <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
                     <i className="fas fa-cog w-5 text-center text-gray-400"></i>
                     <span>Settings</span>

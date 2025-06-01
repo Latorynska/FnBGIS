@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard/Dashboard'
 import Layout from './layouts/Layout'
 import ManageBranchArea from './pages/ManageBranchArea/ManageBranchArea'
 import ManageBranchData from './pages/ManageBranchData/ManageBranchData'
+import ManageBrandInformation from './pages/ManageBrandInformation/ManageBrandInformation'
 
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
               <Route path='/dashboard' element={<Dashboard />} />
               <Route path='/manage-branch-area' element={<ManageBranchArea />} />
               <Route path='/manage-branch-data' element={<ManageBranchData />} />
+              <Route path='/manage-brand-information' element={<ManageBrandInformation />} />
             </Route>
           </Routes>
         </BrowserRouter>

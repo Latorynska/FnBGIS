@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoDine | Brand Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #111827 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(74, 222, 128, 0.5);
+        }
+
+        .bg-pattern {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(74, 222, 128, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 30% 70%, rgba(239, 68, 68, 0.1) 0%, transparent 20%);
+        }
+
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .active-sidebar-item {
+            background: rgba(74, 222, 128, 0.2);
+            border-left: 3px solid #10B981;
+        }
+
+        .table-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: rgba(74, 222, 128, 0.2);
+            border-bottom: 2px solid #10B981;
+        }
+
+        .menu-item-card {
+            transition: all 0.2s ease;
+        }
+
+        .menu-item-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-tab {
+            transition: all 0.2s ease;
+        }
+
+        .category-tab.active {
+            background: rgba(74, 222, 128, 0.2);
+            border-bottom: 2px solid #10B981;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <!-- Background pattern -->
+    <div class="bg-pattern fixed inset-0 -z-10"></div>
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 bg-gray-900 bg-opacity-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
+            <div class="p-4 flex items-center space-x-3 border-b border-gray-800">
+                <div class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-map-marked-alt text-white"></i>
+                </div>
+                <h1 class="text-xl font-bold">GeoDine</h1>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-1">
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-tachometer-alt w-5 text-center text-emerald-400"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-store w-5 text-center text-blue-400"></i>
+                    <span>Branches</span>
+                </a>
+                <a href="#" class="sidebar-item active-sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-trademark w-5 text-center text-purple-400"></i>
+                    <span>Brands</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-chart-line w-5 text-center text-yellow-400"></i>
+                    <span>Performance</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-users w-5 text-center text-pink-400"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="#" class="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
+                    <i class="fas fa-cog w-5 text-center text-gray-400"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+
+            <div class="p-4 border-t border-gray-800">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-300"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium">Admin User</div>
+                        <div class="text-xs text-gray-400">admin@geodine.com</div>
+                    </div>
+                </div>
+                <button
+                    class="mt-4 w-full py-2 px-4 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm flex items-center justify-center space-x-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="bg-gray-900 bg-opacity-80 border-b border-gray-800 p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button class="sidebar-toggle p-2 rounded-lg hover:bg-gray-800">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="text-xl font-bold">Brand Management</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Search..."
+                            class="input-field pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-white placeholder-gray-400 text-sm">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                    </div>
+                    <button class="p-2 rounded-lg hover:bg-gray-800 relative">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <main class="p-6 space-y-6">
+                <!-- Brand Selection -->
+                <div class="card p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-medium">Select Brand</h3>
+                        <button id="addBrandBtn" class="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
+                            <i class="fas fa-plus mr-1"></i> Add Brand
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div class="brand-card cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-emerald-500 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-emerald-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-coffee text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium">Urban Brew</div>
+                                    <div class="text-xs text-gray-400">Coffee & Cafe</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="brand-card cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-hamburger text-blue-400"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium">Burger Junction</div>
+                                    <div class="text-xs text-gray-400">Fast Food</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="brand-card cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-red-500 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-pizza-slice text-red-400"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium">Pizza Palace</div>
+                                    <div class="text-xs text-gray-400">Italian</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="brand-card cursor-pointer p-4 rounded-lg border border-gray-700 hover:border-yellow-500 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-yellow-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-ice-cream text-yellow-400"></i>
+                                </div>
+                                <div>
+                                    <div class="font-medium">Sweet Treats</div>
+                                    <div class="text-xs text-gray-400">Desserts</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brand Details and Menu -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Brand Information Form -->
+                    <div class="card p-6">
+                        <h3 class="text-lg font-bold mb-4">Brand Information</h3>
+                        <form class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Brand Name</label>
+                                    <input type="text" value="Urban Brew" class="input-field w-full px-4 py-2 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Brand Code</label>
+                                    <input type="text" value="BR-URB-001" class="input-field w-full px-4 py-2 rounded-lg">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Brand Logo</label>
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+                                        <img src="https://via.placeholder.com/64" alt="Brand Logo" class="w-full h-full object-cover">
+                                    </div>
+                                    <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
+                                        Change Logo
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Category</label>
+                                <select class="input-field w-full px-4 py-2 rounded-lg">
+                                    <option>Coffee & Cafe</option>
+                                    <option>Fast Food</option>
+                                    <option>Restaurant</option>
+                                    <option>Desserts</option>
+                                    <option>Beverages</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Description</label>
+                                <textarea class="input-field w-full px-4 py-2 rounded-lg" rows="3">Premium coffee shop chain serving specialty coffee and light meals since 2010.</textarea>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Website</label>
+                                    <input type="url" value="https://urbanbrew.com" class="input-field w-full px-4 py-2 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Contact Email</label>
+                                    <input type="email" value="contact@urbanbrew.com" class="input-field w-full px-4 py-2 rounded-lg">
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 pt-4">
+                                <button type="button" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center">
+                                    <i class="fas fa-save mr-2"></i> Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Menu Items -->
+                    <div class="card p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold">Menu Items</h3>
+                            <button id="addMenuItemBtn" class="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
+                                <i class="fas fa-plus mr-1"></i> Add Item
+                            </button>
+                        </div>
+
+                        <!-- Category Tabs -->
+                        <div class="flex border-b border-gray-700 mb-4">
+                            <button class="category-tab active px-4 py-2 text-sm font-medium" data-category="all">
+                                <i class="fas fa-list mr-2"></i> All
+                            </button>
+                            <button class="category-tab px-4 py-2 text-sm font-medium" data-category="beverages">
+                                <i class="fas fa-coffee mr-2"></i> Beverages
+                            </button>
+                            <button class="category-tab px-4 py-2 text-sm font-medium" data-category="food">
+                                <i class="fas fa-utensils mr-2"></i> Food
+                            </button>
+                            <button class="category-tab px-4 py-2 text-sm font-medium" data-category="desserts">
+                                <i class="fas fa-ice-cream mr-2"></i> Desserts
+                            </button>
+                        </div>
+
+                        <!-- Menu Items List -->
+                        <div class="overflow-y-auto" style="max-height: 500px;">
+                            <div class="space-y-3">
+                                <!-- Beverage Items -->
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="beverages">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-coffee text-blue-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Espresso</div>
+                                                <div class="text-xs text-gray-400">Strong black coffee</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$3.50</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="beverages">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-mug-hot text-blue-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Cappuccino</div>
+                                                <div class="text-xs text-gray-400">Espresso with steamed milk</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$4.50</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="beverages">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-glass-whiskey text-blue-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Iced Latte</div>
+                                                <div class="text-xs text-gray-400">Cold coffee with milk</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$4.75</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Food Items -->
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="food">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-bread-slice text-yellow-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Avocado Toast</div>
+                                                <div class="text-xs text-gray-400">Sourdough with avocado and eggs</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$8.50</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="food">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-cheese text-yellow-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Breakfast Sandwich</div>
+                                                <div class="text-xs text-gray-400">Egg, cheese and bacon on croissant</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$7.25</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Dessert Items -->
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="desserts">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-pink-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-cookie text-pink-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Chocolate Croissant</div>
+                                                <div class="text-xs text-gray-400">Buttery pastry with chocolate</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$3.75</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="menu-item-card p-4 bg-gray-800 bg-opacity-50 rounded-lg" data-category="desserts">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-12 h-12 bg-pink-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i class="fas fa-ice-cream text-pink-400"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium">Tiramisu</div>
+                                                <div class="text-xs text-gray-400">Coffee-flavored Italian dessert</div>
+                                                <div class="mt-1 text-sm text-emerald-400">$5.50</div>
+                                            </div>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button class="text-blue-400 hover:text-blue-300 p-1">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:text-red-300 p-1">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add Brand Modal -->
+    <div id="addBrandModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="dashboard-container w-full max-w-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">Add New Brand</h3>
+                <button id="closeBrandModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Brand Name</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Brand Code</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg" placeholder="BR-XXX">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Brand Logo</label>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center">
+                            <i class="fas fa-image text-gray-400"></i>
+                        </div>
+                        <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
+                            Upload Logo
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Category</label>
+                    <select class="input-field w-full px-4 py-2 rounded-lg">
+                        <option>Select Category</option>
+                        <option>Coffee & Cafe</option>
+                        <option>Fast Food</option>
+                        <option>Restaurant</option>
+                        <option>Desserts</option>
+                        <option>Beverages</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Description</label>
+                    <textarea class="input-field w-full px-4 py-2 rounded-lg" rows="3" placeholder="Brief description of the brand"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelAddBrand" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center">
+                        <i class="fas fa-save mr-2"></i> Save Brand
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Menu Item Modal -->
+    <div id="addMenuItemModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="dashboard-container w-full max-w-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">Add Menu Item</h3>
+                <button id="closeMenuItemModal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Item Name</label>
+                        <input type="text" class="input-field w-full px-4 py-2 rounded-lg" placeholder="e.g. Espresso">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Category</label>
+                        <select class="input-field w-full px-4 py-2 rounded-lg">
+                            <option>Beverages</option>
+                            <option>Food</option>
+                            <option>Desserts</option>
+                            <option>Sides</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Description</label>
+                    <textarea class="input-field w-full px-4 py-2 rounded-lg" rows="2" placeholder="Brief description of the item"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Price ($)</label>
+                        <input type="number" step="0.01" class="input-field w-full px-4 py-2 rounded-lg" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Preparation Time</label>
+                        <input type="number" class="input-field w-full px-4 py-2 rounded-lg" placeholder="Minutes">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Calories</label>
+                        <input type="number" class="input-field w-full px-4 py-2 rounded-lg" placeholder="kcal">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Item Image</label>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center">
+                            <i class="fas fa-image text-gray-400"></i>
+                        </div>
+                        <button type="button" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
+                            Upload Image
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" id="cancelAddMenuItem" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center">
+                        <i class="fas fa-save mr-2"></i> Save Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Brand modal functionality
+            const addBrandBtn = document.getElementById('addBrandBtn');
+            const addBrandModal = document.getElementById('addBrandModal');
+            const closeBrandModal = document.getElementById('closeBrandModal');
+            const cancelAddBrand = document.getElementById('cancelAddBrand');
+
+            addBrandBtn.addEventListener('click', () => {
+                addBrandModal.classList.remove('hidden');
+            });
+
+            closeBrandModal.addEventListener('click', () => {
+                addBrandModal.classList.add('hidden');
+            });
+
+            cancelAddBrand.addEventListener('click', () => {
+                addBrandModal.classList.add('hidden');
+            });
+
+            // Menu item modal functionality
+            const addMenuItemBtn = document.getElementById('addMenuItemBtn');
+            const addMenuItemModal = document.getElementById('addMenuItemModal');
+            const closeMenuItemModal = document.getElementById('closeMenuItemModal');
+            const cancelAddMenuItem = document.getElementById('cancelAddMenuItem');
+
+            addMenuItemBtn.addEventListener('click', () => {
+                addMenuItemModal.classList.remove('hidden');
+            });
+
+            closeMenuItemModal.addEventListener('click', () => {
+                addMenuItemModal.classList.add('hidden');
+            });
+
+            cancelAddMenuItem.addEventListener('click', () => {
+                addMenuItemModal.classList.add('hidden');
+            });
+
+            // Category tabs functionality
+            const categoryTabs = document.querySelectorAll('.category-tab');
+            const menuItems = document.querySelectorAll('.menu-item-card');
+
+            categoryTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    categoryTabs.forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tab
+                    tab.classList.add('active');
+                    
+                    const category = tab.getAttribute('data-category');
+                    
+                    // Show/hide menu items based on category
+                    menuItems.forEach(item => {
+                        if (category === 'all') {
+                            item.classList.remove('hidden');
+                        } else {
+                            if (item.getAttribute('data-category') === category) {
+                                item.classList.remove('hidden');
+                            } else {
+                                item.classList.add('hidden');
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Brand card selection
+            const brandCards = document.querySelectorAll('.brand-card');
+            
+            brandCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    // Remove any active state from other cards
+                    brandCards.forEach(c => c.classList.remove('border-emerald-500', 'border-blue-500', 'border-red-500', 'border-yellow-500'));
+                    
+                    // Add appropriate border color based on brand
+                    if (card.querySelector('.fa-coffee')) {
+                        card.classList.add('border-emerald-500');
+                    } else if (card.querySelector('.fa-hamburger')) {
+                        card.classList.add('border-blue-500');
+                    } else if (card.querySelector('.fa-pizza-slice')) {
+                        card.classList.add('border-red-500');
+                    } else if (card.querySelector('.fa-ice-cream')) {
+                        card.classList.add('border-yellow-500');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
