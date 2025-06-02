@@ -1,18 +1,19 @@
 import { act, useState } from 'react';
 import './ManageBrandInformation.css';
 import Select from '../../components/Select/Select';
+import Button from '../../components/Button/Button';
+import Modal from '../../components/Modal/Modal';
 
 const ManageBrandInformation = () => {
     const [activeTab, setactiveTab] = useState('all');
+    const [showModal, setShowModal] = useState(false);
+
     return (
         <>
             {/* specialty list */}
             <div className="card p-4">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-medium">Brand Specialty</h3>
-                    {/* <button id="addBrandBtn" className="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
-                        <i className="fas fa-plus mr-1"></i> Add Brand
-                    </button> */}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -113,7 +114,7 @@ const ManageBrandInformation = () => {
                             <Select
                                 label={'category'}
                                 value={''}
-                                onChange={(e) => {}}
+                                onChange={(e) => { }}
                                 options={[
                                     { label: "Coffee & Cafe", value: "coffee" },
                                     { label: "Fast Food", value: "fastfood" },
@@ -154,9 +155,9 @@ const ManageBrandInformation = () => {
                 <div className="card p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold">Menu Items</h3>
-                        <button id="addMenuItemBtn" className="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
-                            <i className="fas fa-plus mr-1"></i> Add Item
-                        </button>
+                        <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => setShowModal(true)}>
+                            Add New Menu
+                        </Button>
                     </div>
 
                     {/* category tab */}
@@ -520,6 +521,75 @@ const ManageBrandInformation = () => {
                     </div>
                 </div>
             </div>
+            {showModal && (
+                <Modal onClose={() => setShowModal(false)} title="New Menu Item">
+                    <div className="space-y-4">
+                        <form className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Item Name</label>
+                                    <input type="text" className="input-field w-full px-4 py-2 rounded-lg" placeholder="e.g. Espresso" />
+                                </div>
+                                <div>
+                                    <Select
+                                        label={'category'}
+                                        value={''}
+                                        onChange={(e) => { }}
+                                        options={[
+                                            { label: "Coffee & Cafe", value: "coffee" },
+                                            { label: "Fast Food", value: "fastfood" },
+                                            { label: "Restaurant", value: "restaurant" },
+                                            { label: "Desserts", value: "desserts" },
+                                            { label: "Beverages", value: "beverages" }]
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Description</label>
+                                <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="2" placeholder="Brief description of the item"></textarea>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Price ($)</label>
+                                    <input type="number" step="0.01" className="input-field w-full px-4 py-2 rounded-lg" placeholder="0.00" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Preparation Time</label>
+                                    <input type="number" className="input-field w-full px-4 py-2 rounded-lg" placeholder="Minutes" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Calories</label>
+                                    <input type="number" className="input-field w-full px-4 py-2 rounded-lg" placeholder="kcal" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Item Image</label>
+                                <div className="flex items-center space-x-4">
+                                    <div className="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center">
+                                        <i className="fas fa-image text-gray-400"></i>
+                                    </div>
+                                    <button type="button" className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
+                                        Upload Image
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-4">
+                                <Button variant="neutral" size="large" onClick={() => setShowModal(prev => !prev)}>
+                                    Cancel
+                                </Button>
+                                <Button variant="primary" icon="fas fa-save mr-2" size="large" onClick={() => setShowModal(prev => !prev)}>
+                                    Save Item
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </Modal>
+            )}
         </>
     );
 }
