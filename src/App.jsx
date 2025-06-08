@@ -9,6 +9,7 @@ import Layout from './layouts/Layout'
 import ManageBranchArea from './pages/ManageBranchArea/ManageBranchArea'
 import ManageBranchData from './pages/ManageBranchData/ManageBranchData'
 import ManageBrandInformation from './pages/ManageBrandInformation/ManageBrandInformation'
+import NotFound from './pages/NotFound/NotFound'
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
               <Route path='/manage-branch-data' element={<ManageBranchData />} />
               <Route path='/manage-brand-information' element={<ManageBrandInformation />} />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </Provider>

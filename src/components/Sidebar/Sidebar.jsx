@@ -1,8 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const Sidebar = () => {
     const location = useLocation();
     const isActive = (path) => location.pathname === path;
+    const isVisible = useSelector((state) => state.usability.isSidebarVisible);
+
+    if (!isVisible) return null;
     return ( 
         <>
         <div className="sidebar w-64 bg-gray-900 bg-opacity-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
@@ -18,10 +22,10 @@ const Sidebar = () => {
                     <i className="fas fa-tachometer-alt w-5 text-center text-emerald-400"></i>
                     <span>Dashboard</span>
                 </Link>
-                <Link to="manage-branch-area" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-area') ? 'active-sidebar-item' : ''}`}>
+                {/* <Link to="manage-branch-area" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-area') ? 'active-sidebar-item' : ''}`}>
                     <i className="fas fa-map-marked w-5 text-center text-yellow-400"></i>
                     <span>Area Cabang</span>
-                </Link>
+                </Link> */}
                 <Link to="manage-branch-data" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-data') ? 'active-sidebar-item' : ''}`}>
                     <i className="fas fa-store w-5 text-center text-blue-400"></i>
                     <span>Data Cabang</span>
@@ -30,6 +34,11 @@ const Sidebar = () => {
                     {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
                     <i className="fas fa-trademark w-5 text-center text-red-400"></i>
                     <span>Brand Data</span>
+                </Link>
+                <Link to="location-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/location-metadata') ? 'active-sidebar-item' : ''}`}>
+                    {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
+                    <i className="fas fa-landmark-flag w-5 text-center text-blue-400"></i>
+                    <span>Map Metadata</span>
                 </Link>
                 {/* <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
                     <i className="fas fa-chart-line w-5 text-center text-purple-400"></i>
