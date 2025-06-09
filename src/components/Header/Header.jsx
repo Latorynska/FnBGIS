@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react';
 import { toggleSidebar } from '../../redux/slices/usabilitySlices';
 import { useDispatch } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 
 const Header = () => {
+    const location = useLocation();
+    const isActive = (path) => location.pathname === path;
+    const routeTitles = {
+        '/dashboard': 'Dashboard',
+        '/manage-branch-data': 'Data Cabang',
+        '/manage-brand-information': 'Brand Data',
+        '/manage-map-metadata': 'Metadata Lokasi'
+    };
+    const pageTitle = routeTitles[location.pathname] || 'Halaman';
     const dispatch = useDispatch();
     return (
         <header className="bg-gray-900 bg-opacity-80 border-b border-gray-800 p-4 flex items-center justify-between">
@@ -10,7 +20,7 @@ const Header = () => {
                 <button className="sidebar-toggle p-2 rounded-lg hover:bg-gray-800" onClick={() => dispatch(toggleSidebar())}>
                     <i className="fas fa-bars"></i>
                 </button>
-                <h2 className="text-xl font-bold">Branch Performance Dashboard</h2>
+                <h2 className="text-xl font-bold">{pageTitle}</h2>
             </div>
             <div className="flex items-center space-x-4">
                 <div className="relative">

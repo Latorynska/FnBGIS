@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
+
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw';
+import 'leaflet-draw/dist/leaflet.draw.css';
+
 import Button from "../../components/Button/Button";
 import Pill from "../../components/Pill/Pill";
 import Modal from "../../components/Modal/Modal";
 import Pagination from "../../components/Pagination/Pagination";
 import './ManageBranch.css';
+import BarChart from "../../components/Charts/BarChart";
 
 const initialBranches = [
     {
@@ -168,15 +175,199 @@ const ManageBranchData = () => {
     const [showModal, setShowModal] = useState(false);
     const [newBranchName, setNewBranchName] = useState('');
 
+
     const [branches, setBranches] = useState(initialBranches);
     const [currentBranchesData, setCurrentBranchesData] = useState([]);
     const [activeForm, setActiveForm] = useState('details');
+
+    const [newPolygon, setNewPolygon] = useState(null);
+    const mapRef = useRef(null);
+    const drawControlRef = useRef(null);
+    const drawnItemsRef = useRef(new L.FeatureGroup());
+    useEffect(() => {
+        if (!mapRef.current || mapRef.current._leaflet_map_instance) return;
+
+        const map = L.map(mapRef.current).setView([-6.9175, 107.6191], 12);
+        mapRef.current._leaflet_map_instance = map;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+
+        map.addLayer(drawnItemsRef.current);
+
+        drawControlRef.current = new L.Control.Draw({
+            draw: {
+                polygon: true,
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                marker: false,
+                circlemarker: false,
+            },
+            edit: false,
+        });
+
+        branches.forEach((branch) => {
+            const hasCoordinates =
+                typeof branch.lat === 'number' && typeof branch.lng === 'number';
+            const hasArea =
+                Array.isArray(branch.area) &&
+                branch.area.length > 0 &&
+                Array.isArray(branch.area[0]) &&
+                typeof branch.area[0][0] === 'number' &&
+                typeof branch.area[0][1] === 'number';
+            if (!hasCoordinates) return;
+
+            const color =
+                branch.status === 'active'
+                    ? '#10B981'
+                    : branch.status === 'warning'
+                        ? '#F59E0B'
+                        : '#EF4444';
+
+            const popupContent = `
+        <div>
+          <h3 class="font-bold mb-1">${branch.name}</h3>
+          <div class="text-sm">Revenue: $${branch.revenue?.toLocaleString?.() || 0}</div>
+          <div class="text-sm">Customers: ${branch.customers ?? 0}</div>
+        </div>
+      `;
+            const marker = L.marker([branch.lat, branch.lng], {
+                icon: L.divIcon({
+                    html: `<div style="color: ${color}; font-size: 24px;"><i class="fas fa-map-marker-alt"></i></div>`,
+                    className: 'map-marker-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24],
+                }),
+            }).addTo(map);
+            marker.bindPopup(popupContent);
+
+            if (hasArea) {
+                const polygon = L.polygon(branch.area, {
+                    color,
+                    fillColor: color,
+                    fillOpacity: 0.2,
+                    weight: 2,
+                }).addTo(map);
+
+                polygon.bindPopup(popupContent);
+                polygon.on('mouseover', () =>
+                    polygon.setStyle({ weight: 4, fillOpacity: 0.3 })
+                );
+                polygon.on('mouseout', () =>
+                    polygon.setStyle({ weight: 2, fillOpacity: 0.2 })
+                );
+            }
+        });
+
+
+        map.on('draw:created', function (event) {
+            const layer = event.layer;
+            const latlngs = layer.getLatLngs()[0];
+            setNewPolygon({
+                layer,
+                latlngs: latlngs.map(coord => [coord.lat, coord.lng]),
+            });
+            setShowModal(true);
+            map.removeControl(drawControlRef.current);
+        });
+    }, [branches]);
+
+    const handleAddBranch = () => {
+        const map = mapRef.current._leaflet_map_instance;
+        if (drawControlRef.current) {
+            map.addControl(drawControlRef.current);
+            new L.Draw.Polygon(map, drawControlRef.current.options.draw.polygon).enable();
+        }
+    };
+
+    const handleSaveBranch = () => {
+        if (!newPolygon) return;
+        const lat = newPolygon.latlngs[0][0];
+        const lng = newPolygon.latlngs[0][1];
+        const newBranch = {
+            id: Date.now(),
+            name: newBranchName || 'Cabang Baru',
+            lat,
+            lng,
+            revenue: 0,
+            customers: 0,
+            status: 'active',
+            area: newPolygon.latlngs,
+        };
+        setBranches(prev => [...prev, newBranch]);
+        drawnItemsRef.current.addLayer(newPolygon.layer);
+        setNewPolygon(null);
+        setNewBranchName('');
+        setShowModal(false);
+    };
+
+    const handleAddPoint = (branch) => {
+        // Aktifkan draw marker mode khusus untuk branch ini
+    };
+
+    const handleEditPoint = (branch) => {
+        // Biarkan user geser marker dan simpan posisi baru
+    };
+
+    const handleDeletePoint = (branch) => {
+        // Hapus lat/lng dari branch ini
+    };
+
+    const handleAddArea = (branch) => {
+        // Aktifkan draw polygon mode untuk branch ini
+    };
+
+    const handleEditArea = (branch) => {
+        // Aktifkan edit polygon mode
+    };
+
+    const handleDeleteArea = (branch) => {
+        // Kosongkan area dari branch ini
+    };
+    const getStatusText = (status) => {
+        return status === 'active' ? 'Active' : status === 'warning' ? 'Needs Attention' : 'Critical';
+    };
     return (
         <>
-            {/* table data list cabang */}
+            {/* map */}
+            <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+                {/* map ui */}
+                <div className="lg:col-span-5">
+                    <div className="card p-4 h-full">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium">Branch Locations</h3>
+                        </div>
+                        <div className="h-96 relative">
+                            <div
+                                ref={mapRef}
+                                style={{ height: '100%', width: '100%', borderRadius: '12px', zIndex: 0 }}
+                                id="map"
+                            />
+                        </div>
+                    </div>
+                </div>
+                {/* chart */}
+                <div className="lg:col-span-3 flex flex-col">
+                    <div className="card p-4 flex flex-col flex-1">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium">Top Performing Branches</h3>
+                            <select className="bg-gray-800 text-sm px-3 py-1 rounded">
+                                <option>This Month</option>
+                            </select>
+                        </div>
+                        <div className="flex-1 min-h-0"> {/* 👈 penting untuk mencegah overflow */}
+                            <BarChart branches={branches} />
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-2">
+            {/* table data list cabang */}
+            <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+                {/* datalist table */}
+                <div className="lg:col-span-5">
                     <div className="card p-4">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-medium">All Branches</h3>
@@ -418,7 +609,7 @@ const ManageBranchData = () => {
                             <div className="flex space-x-2">
                                 <Pagination
                                     dataList={branches}
-                                    itemsPerPage={5}
+                                    itemsPerPage={8}
                                     setCurrentData={setCurrentBranchesData}
                                     numberingData={true}
                                 />
@@ -427,19 +618,19 @@ const ManageBranchData = () => {
                     </div>
                 </div>
                 {/* form area */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-3 space-y-6">
                     <div className="flex border-b border-gray-700">
-                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'details' ? 'active' : ''}`} data-tab="details" onClick={()=>setActiveForm('details')}>
+                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'details' ? 'active' : ''}`} data-tab="details" onClick={() => setActiveForm('details')}>
                             <i className="fas fa-info-circle mr-2"></i> Branch Details
                         </button>
-                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'sales' ? 'active' : ''}`} data-tab="sales" onClick={()=>setActiveForm('sales')}>
+                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'sales' ? 'active' : ''}`} data-tab="sales" onClick={() => setActiveForm('sales')}>
                             <i className="fas fa-chart-line mr-2"></i> Sales Data
                         </button>
-                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'menu' ? 'active' : ''}`} data-tab="menu" onClick={()=>setActiveForm('menu')}>
+                        <button className={`tab-button px-4 py-2 text-sm font-medium ${activeForm === 'menu' ? 'active' : ''}`} data-tab="menu" onClick={() => setActiveForm('menu')}>
                             <i className="fas fa-utensils mr-2"></i> Menu Items
                         </button>
                     </div>
-                    {activeForm === 'details' &&(
+                    {activeForm === 'details' && (
                         <div id="details-tab" className="tab-content card p-6">
                             <h3 className="text-lg font-bold mb-4">Branch Information</h3>
                             <form className="space-y-4">
@@ -456,13 +647,13 @@ const ManageBranchData = () => {
 
                                 <div>
                                     <label className="block text-sm text-gray-400 mb-1">Address</label>
-                                    <input type="text"  className="input-field w-full px-4 py-2 rounded-lg" />
+                                    <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-sm text-gray-400 mb-1">City</label>
-                                        <input type="text"  className="input-field w-full px-4 py-2 rounded-lg" />
+                                        <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
                                     </div>
                                     <div>
                                         <label className="block text-sm text-gray-400 mb-1">State</label>
@@ -520,7 +711,7 @@ const ManageBranchData = () => {
                             </form>
                         </div>
                     )}
-                    {activeForm === 'sales' &&(
+                    {activeForm === 'sales' && (
                         <div id="sales-tab" className="tab-content card p-6">
                             <h3 className="text-lg font-bold mb-4">Sales Data for Downtown Cafe</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -606,7 +797,7 @@ const ManageBranchData = () => {
                             </form>
                         </div>
                     )}
-                    {activeForm === 'menu' &&(
+                    {activeForm === 'menu' && (
                         <div id="menu-tab" className="tab-content card p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold">Menu Items</h3>
@@ -646,7 +837,7 @@ const ManageBranchData = () => {
                                                 <div className="text-sm">$12.99</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'active'} text={'Available'}/>
+                                                <Pill status={'active'} text={'Available'} />
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
                                                 <button className="text-blue-400 hover:text-blue-300 mr-3">
@@ -676,7 +867,7 @@ const ManageBranchData = () => {
                                                 <div className="text-sm">$14.99</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'active'} text={'Available'}/>
+                                                <Pill status={'active'} text={'Available'} />
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
                                                 <button className="text-blue-400 hover:text-blue-300 mr-3">
@@ -706,7 +897,7 @@ const ManageBranchData = () => {
                                                 <div className="text-sm">$9.99</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'active'} text={'Available'}/>
+                                                <Pill status={'active'} text={'Available'} />
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
                                                 <button className="text-blue-400 hover:text-blue-300 mr-3">
@@ -736,7 +927,7 @@ const ManageBranchData = () => {
                                                 <div className="text-sm">$4.50</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'critical'} text={'Out of Stock'}/>
+                                                <Pill status={'critical'} text={'Out of Stock'} />
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
                                                 <button className="text-blue-400 hover:text-blue-300 mr-3">
@@ -754,7 +945,6 @@ const ManageBranchData = () => {
                     )}
                 </div>
             </div>
-
 
             {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Nama Cabang Baru">
@@ -774,6 +964,25 @@ const ManageBranchData = () => {
                     </div>
                 </Modal>
             )}
+            {/* {showModal && (
+                <Modal onClose={() => setShowModal(false)} title="Nama Cabang Baru">
+                    <div className="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="Nama Cabang"
+                            className="w-full px-4 py-2 border rounded"
+                            value={newBranchName}
+                            onChange={(e) => setNewBranchName(e.target.value)}
+                        />
+                        <button
+                            onClick={handleSaveBranch}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                        >
+                            Simpan Cabang
+                        </button>
+                    </div>
+                </Modal>
+            )} */}
         </>
     );
 }

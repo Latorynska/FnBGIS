@@ -35,7 +35,7 @@ const Sidebar = () => {
                     <i className="fas fa-trademark w-5 text-center text-red-400"></i>
                     <span>Brand Data</span>
                 </Link>
-                <Link to="location-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/location-metadata') ? 'active-sidebar-item' : ''}`}>
+                <Link to="manage-map-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-map-metadata') ? 'active-sidebar-item' : ''}`}>
                     {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
                     <i className="fas fa-landmark-flag w-5 text-center text-blue-400"></i>
                     <span>Map Metadata</span>
