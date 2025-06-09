@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAfcRTTv9G5WQ9yckhNPEJZd7H8yUVs8hc",
-  authDomain: "labspecsmanagement.firebaseapp.com",
-  projectId: "labspecsmanagement",
-  storageBucket: "labspecsmanagement.appspot.com",
-  messagingSenderId: "1014616473231",
-  appId: "1:1014616473231:web:3a395218edc4a898e8bafa",
-  measurementId: "G-JVMS0HWQ36"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 
