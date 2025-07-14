@@ -1,12 +1,34 @@
-import { act, useState } from 'react';
+import { useEffect, useState } from 'react';
 import './ManageBrandInformation.css';
 import Select from '../../components/Select/Select';
 import Button from '../../components/Button/Button';
 import Modal from '../../components/Modal/Modal';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchBrands } from '../../redux/thunks/brandThunks';
 
 const ManageBrandInformation = () => {
+    const dispatch = useDispatch();
     const [activeTab, setactiveTab] = useState('all');
     const [showModal, setShowModal] = useState(false);
+    const [brand, setBrand] = useState({
+        nama:'',
+        kategori:'',
+        kode: '',
+        deskripsi: '',
+        website: '',
+        email: ''
+    });
+
+    const { items: brands, loading, error } = useSelector(state => state.brand);
+
+    useEffect(() => {
+        dispatch(fetchBrands());
+    }, [dispatch]);
+
+    useEffect(() => {
+        setBrand(brands);
+    }, [brands]);
+
 
     return (
         <>
@@ -71,7 +93,12 @@ const ManageBrandInformation = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Brand Name</label>
-                                <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
+                                <input 
+                                    type="text" 
+                                    className="input-field w-full px-4 py-2 rounded-lg" 
+                                    value={brand.name}
+                                    onChange={(e) => setBrand({ ...brand, name: e.target.value })}
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Brand Code</label>
