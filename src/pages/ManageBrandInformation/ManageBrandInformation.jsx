@@ -26,7 +26,9 @@ const ManageBrandInformation = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        setBrand(brands);
+        if (brands.length > 0) {
+            setBrand(brands[0]);
+        }
     }, [brands]);
 
 
@@ -96,8 +98,8 @@ const ManageBrandInformation = () => {
                                 <input 
                                     type="text" 
                                     className="input-field w-full px-4 py-2 rounded-lg" 
-                                    value={brand.name}
-                                    onChange={(e) => setBrand({ ...brand, name: e.target.value })}
+                                    value={brand.nama || ''}
+                                    onChange={(e) => setBrand({ ...brand, nama: e.target.value })}
                                 />
                             </div>
                             <div>
