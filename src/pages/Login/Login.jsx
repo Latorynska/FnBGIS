@@ -1,7 +1,34 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import './login.css';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { loginUser } from '../../redux/thunks/authApi';
 const Login = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const loading = useSelector(state => state.auth.loading);
+  const error = useSelector(state => state.auth.error);
+
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    console.log('submitted');
+    dispatch(loginUser(formData))
+  };
+
   useEffect(() => {
     const markers = document.querySelectorAll('.map-marker');
 
@@ -70,16 +97,24 @@ const Login = () => {
           <p className="text-gray-300">FnB's Performance Mapping Platform</p>
         </div>
 
-        <form className="space-y-6">
+        <form className="space-y-6" onSubmit={handleLogin}>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i className="fas fa-envelope text-gray-400"></i>
               </div>
-              <input id="email" name="email" type="email" required placeholder="you@example.com"
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="you@example.com"
                 className="input-field pl-10 w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white placeholder-gray-400"
-                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }} />
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}
+                value={formData.email}
+                onChange={handleInputChange}
+              />
             </div>
           </div>
 
@@ -89,9 +124,17 @@ const Login = () => {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <i className="fas fa-lock text-gray-400"></i>
               </div>
-              <input id="password" name="password" type="password" required placeholder="••••••••"
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                placeholder="••••••••"
                 className="input-field pl-10 w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white placeholder-gray-400"
-                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }} />
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}
+                value={formData.password}
+                onChange={handleInputChange}
+              />
             </div>
           </div>
 

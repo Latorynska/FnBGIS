@@ -64,10 +64,10 @@ const Sidebar = () => {
                         <div className="text-xs text-gray-400">admin@fnb.gis.com</div>
                     </div>
                 </div>
-                <button className="mt-4 w-full py-2 px-4 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm flex items-center justify-center space-x-2">
+                <Link to='/Logout' className="mt-4 w-full py-2 px-4 rounded-lg bg-gray-800 hover:bg-gray-700 text-sm flex items-center justify-center space-x-2">
                     <i className="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
-                </button>
+                </Link>
             </div>
         </div>
         </>
