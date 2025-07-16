@@ -112,7 +112,7 @@ const ManageBrandInformation = () => {
                             <label className="block text-sm text-gray-400 mb-1">Brand Logo</label>
                             <div className="flex items-center space-x-4">
                                 <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
-                                    <img src="https://avatar.iran.liara.run/public" alt="Logo" className="w-full h-full object-cover" />
+                                    <img src={brand.iconUrl} alt="Logo" className="w-full h-full object-cover" />
                                 </div>
                                 <button type="button" className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
                                     Change Logo
@@ -142,31 +142,46 @@ const ManageBrandInformation = () => {
                             </select> */}
                             <Select
                                 label={'category'}
-                                value={''}
-                                onChange={(e) => { }}
+                                value={brand.kategori}
+                                onChange={(e) => { setBrand({ ...brand, kategori: e.target.value }) }}
                                 options={[
-                                    { label: "Coffee & Cafe", value: "coffee" },
+                                    { label: "Coffee & Cafe", value: "cafe" },
                                     { label: "Fast Food", value: "fastfood" },
-                                    { label: "Restaurant", value: "restaurant" },
-                                    { label: "Desserts", value: "desserts" },
-                                    { label: "Beverages", value: "beverages" }]
-                                }
+                                    { label: "Restaurant", value: "restaurant" }
+                                ]}
                             />
                         </div>
 
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Description</label>
-                            <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="3"></textarea>
+                            <textarea 
+                                className="input-field w-full px-4 py-2 rounded-lg" 
+                                rows="3"
+                                value={brand.deskripsi || ''}
+                                onChange={(e) => setBrand({ ...brand, deskripsi: e.target.value })}
+                            >
+
+                            </textarea>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Website</label>
-                                <input type="url" className="input-field w-full px-4 py-2 rounded-lg" />
+                                <input 
+                                    type="url" 
+                                    className="input-field w-full px-4 py-2 rounded-lg" 
+                                    value={brand.website || ''}
+                                    onChange={(e) => setBrand({ ...brand, website: e.target.value })}
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Contact Email</label>
-                                <input type="email" className="input-field w-full px-4 py-2 rounded-lg" />
+                                <input 
+                                    type="email" 
+                                    className="input-field w-full px-4 py-2 rounded-lg" 
+                                    value={brand.email || ''}
+                                    onChange={(e) => setBrand({ ...brand, email: e.target.value })}
+                                />
                             </div>
                         </div>
 
