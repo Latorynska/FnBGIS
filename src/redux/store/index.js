@@ -2,12 +2,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../slices/authSlices';
 import usabilityReducer from '../slices/usabilitySlices';
 import brandReducer from '../slices/brandSlices';
+import daerahReducer from '../slices/daerahSlices';
 
 const store = configureStore({
   reducer: {
     auth: authReducer,
     usability: usabilityReducer,
-    brand: brandReducer
+    brand: brandReducer,
+    daerah: daerahReducer
   },
 });
 
