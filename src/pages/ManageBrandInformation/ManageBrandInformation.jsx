@@ -4,22 +4,32 @@ import Select from '../../components/Select/Select';
 import Button from '../../components/Button/Button';
 import Modal from '../../components/Modal/Modal';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchBrands } from '../../redux/thunks/brandThunks';
+import { fetchBrands, saveBrand, updateBrand } from '../../redux/thunks/brandThunks';
+import { FaImage } from 'react-icons/fa';
+import toast from 'react-hot-toast';
+import CardLoadingOverlay from '../../components/CardLoadingOverlay/CardLoadingOverlay';
+
+
+
 
 const ManageBrandInformation = () => {
     const dispatch = useDispatch();
     const [activeTab, setactiveTab] = useState('all');
     const [showModal, setShowModal] = useState(false);
     const [brand, setBrand] = useState({
-        nama:'',
-        kategori:'',
+        nama: '',
+        kategori: '',
         kode: '',
         deskripsi: '',
         website: '',
-        email: ''
+        email: '',
+        logoFile: null,
+        iconUrl: '',
     });
 
     const { items: brands, loading, error } = useSelector(state => state.brand);
+    const { uid } = useSelector(state => state.auth);
+
 
     useEffect(() => {
         dispatch(fetchBrands());
@@ -31,6 +41,26 @@ const ManageBrandInformation = () => {
         }
     }, [brands]);
 
+    const handleSaveBrand = (e) => {
+        e.preventDefault();
+        const brandData = {
+            nama: brand.nama,
+            kategori: brand.kategori,
+            deskripsi: brand.deskripsi,
+            website: brand.website,
+            email: brand.email,
+            logoFile: brand.logoFile || null,
+            prevIconUrl: brand.iconUrl || null,
+        };
+
+        if (brand.id) {
+            dispatch(updateBrand({ id: brand.id, data: brandData }));
+        } else {
+            dispatch(saveBrand(brandData));
+        }
+
+        setBrand({ ...brand, logoFile: null });
+    };
 
     return (
         <>
@@ -90,56 +120,55 @@ const ManageBrandInformation = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* brand data information */}
                 <div className="card p-6">
+                    <CardLoadingOverlay isVisible={loading} />
                     <h3 className="text-lg font-bold mb-4">Brand Information</h3>
-                    <form className="space-y-4">
+                    <form className="space-y-4" onSubmit={handleSaveBrand}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Brand Name</label>
-                                <input 
-                                    type="text" 
-                                    className="input-field w-full px-4 py-2 rounded-lg" 
+                                <input
+                                    type="text"
+                                    className="input-field w-full px-4 py-2 rounded-lg"
                                     value={brand.nama || ''}
                                     onChange={(e) => setBrand({ ...brand, nama: e.target.value })}
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Brand Code</label>
-                                <input type="text" className="input-field w-full px-4 py-2 rounded-lg" />
-                            </div>
                         </div>
-
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Brand Logo</label>
                             <div className="flex items-center space-x-4">
                                 <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
-                                    <img src={brand.iconUrl} alt="Logo" className="w-full h-full object-cover" />
+                                    {brand.logoFile ? (
+                                        <img src={URL.createObjectURL(brand.logoFile)} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : brand?.iconUrl ? (
+                                        <img src={brand.iconUrl} alt="Logo" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <FaImage className="text-gray-400 text-3xl" />
+                                    )}
                                 </div>
-                                <button type="button" className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    id="brand-logo-input"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            setBrand({ ...brand, logoFile: file });
+                                        }
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg"
+                                    onClick={() => document.getElementById('brand-logo-input').click()}
+                                >
                                     Change Logo
                                 </button>
                             </div>
                         </div>
 
                         <div>
-                            {/* <label className="block text-sm text-gray-400 mb-1">Category</label>
-                            <select className="input-field w-full px-4 py-2 rounded-lg">
-                                <option className="bg-gray-200 text-gray-900 hover:bg-gray-300">
-                                    Coffee & Cafe
-                                </option>
-                                <option className="bg-gray-200 text-gray-900 hover:bg-gray-300">
-                                    Fast Food
-                                </option>
-                                <option className="bg-gray-200 text-gray-900 hover:bg-gray-300">
-                                    Restaurant
-                                </option>
-                                <option className="bg-gray-200 text-gray-900 hover:bg-gray-300">
-                                    Desserts
-                                </option>
-                                <option className="bg-gray-200 text-gray-900 hover:bg-gray-300">
-                                    Beverages
-                                </option>
-
-                            </select> */}
                             <Select
                                 label={'category'}
                                 value={brand.kategori}
@@ -154,8 +183,8 @@ const ManageBrandInformation = () => {
 
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Description</label>
-                            <textarea 
-                                className="input-field w-full px-4 py-2 rounded-lg" 
+                            <textarea
+                                className="input-field w-full px-4 py-2 rounded-lg"
                                 rows="3"
                                 value={brand.deskripsi || ''}
                                 onChange={(e) => setBrand({ ...brand, deskripsi: e.target.value })}
@@ -167,18 +196,18 @@ const ManageBrandInformation = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Website</label>
-                                <input 
-                                    type="url" 
-                                    className="input-field w-full px-4 py-2 rounded-lg" 
+                                <input
+                                    type="url"
+                                    className="input-field w-full px-4 py-2 rounded-lg"
                                     value={brand.website || ''}
                                     onChange={(e) => setBrand({ ...brand, website: e.target.value })}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Contact Email</label>
-                                <input 
-                                    type="email" 
-                                    className="input-field w-full px-4 py-2 rounded-lg" 
+                                <input
+                                    type="email"
+                                    className="input-field w-full px-4 py-2 rounded-lg"
                                     value={brand.email || ''}
                                     onChange={(e) => setBrand({ ...brand, email: e.target.value })}
                                 />
