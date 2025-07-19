@@ -4,10 +4,11 @@ import Select from '../../components/Select/Select';
 import Button from '../../components/Button/Button';
 import Modal from '../../components/Modal/Modal';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchBrands, saveBrand, updateBrand } from '../../redux/thunks/brandThunks';
+import { fetchBrands, fetchMenus, saveBrand, saveMenu, updateBrand, updateMenu } from '../../redux/thunks/brandThunks';
 import { FaImage } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import CardLoadingOverlay from '../../components/CardLoadingOverlay/CardLoadingOverlay';
+import MenuCard from '../../components/MenuCard/MenuCard';
 
 
 
@@ -16,20 +17,25 @@ const ManageBrandInformation = () => {
     const dispatch = useDispatch();
     const [activeTab, setactiveTab] = useState('all');
     const [showModal, setShowModal] = useState(false);
+    const [editMenuId, setEditMenuId] = useState(null);
     const [brand, setBrand] = useState({
-        nama: '',
-        kategori: '',
-        kode: '',
-        deskripsi: '',
-        website: '',
-        email: '',
-        logoFile: null,
-        iconUrl: '',
+        nama: '', kategori: '', kode: '', deskripsi: '', website: '', email: '', logoFile: null, iconUrl: ''
+    });
+    const [menuForm, setMenuForm] = useState({
+        nama: '', kategori: '', deskripsi: '', harga: '', status: '', imageFile: null
     });
 
-    const { items: brands, loading, error } = useSelector(state => state.brand);
-    const { uid } = useSelector(state => state.auth);
+    const { items: brands, loading } = useSelector(state => state.brand);
+    const { items: menus, loading: menuLoading } = useSelector(state => state.menu);
 
+    const tabToKategori = {
+        beverages: 'Beverage',
+        food: 'Food',
+        dessert: 'Dessert'
+    };
+    const filteredMenus = menus.filter(menu =>
+        activeTab === 'all' ? true : menu.kategori === tabToKategori[activeTab]
+    );
 
     useEffect(() => {
         dispatch(fetchBrands());
@@ -38,8 +44,9 @@ const ManageBrandInformation = () => {
     useEffect(() => {
         if (brands.length > 0) {
             setBrand(brands[0]);
+            dispatch(fetchMenus(brands[0].id));
         }
-    }, [brands]);
+    }, [brands, dispatch]);
 
     const handleSaveBrand = (e) => {
         e.preventDefault();
@@ -60,6 +67,34 @@ const ManageBrandInformation = () => {
         }
 
         setBrand({ ...brand, logoFile: null });
+    };
+
+    const handleSaveMenu = (e) => {
+        e.preventDefault();
+        if (!brand.id) return;
+
+        if (editMenuId) {
+            dispatch(updateMenu({ brandId: brand.id, id: editMenuId, data: menuForm }));
+        } else {
+            dispatch(saveMenu({ brandId: brand.id, data: menuForm }));
+        }
+
+        setShowModal(false);
+        setEditMenuId(null);
+        setMenuForm({ nama: '', kategori: '', deskripsi: '', harga: '', status: '', imageFile: null });
+    };
+
+    const handleEditMenu = (menu) => {
+        setEditMenuId(menu.id);
+        setMenuForm({
+            nama: menu.nama,
+            kategori: menu.kategori,
+            deskripsi: menu.deskripsi,
+            harga: menu.harga,
+            status: menu.status,
+            imageFile: null
+        });
+        setShowModal(true);
     };
 
     return (
@@ -226,9 +261,14 @@ const ManageBrandInformation = () => {
                 </div>
                 {/* menu items */}
                 <div className="card p-6">
+                    <CardLoadingOverlay isVisible={menuLoading} />
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold">Menu Items</h3>
-                        <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => setShowModal(true)}>
+                        <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => {
+                            setEditMenuId(null);
+                            setMenuForm({ nama: '', kategori: '', deskripsi: '', harga: '', status: '', imageFile: null });
+                            setShowModal(true);
+                        }}>
                             Add New Menu
                         </Button>
                     </div>
@@ -251,416 +291,125 @@ const ManageBrandInformation = () => {
 
                     {/* menu item list */}
                     <div className="overflow-y-auto" style={{ maxHeight: "480px" }}>
-                        {activeTab === 'all' && (
-                            <div className="space-y-3">
-                                {/* beverage */}
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-coffee text-blue-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Espresso</div>
-                                                <div className="text-xs text-gray-400">Strong black coffee</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$3.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
+                        <div className="space-y-3">
+                            {filteredMenus.length === 0 ? (
+                                <div className="text-sm text-gray-400 italic text-center py-8">
+                                    Menu masih kosong
                                 </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-mug-hot text-blue-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Cappuccino</div>
-                                                <div className="text-xs text-gray-400">Espresso with steamed milk</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$4.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-glass-whiskey text-blue-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Iced Latte</div>
-                                                <div className="text-xs text-gray-400">Cold coffee with milk</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$4.75</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* food items */}
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-bread-slice text-yellow-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Avocado Toast</div>
-                                                <div className="text-xs text-gray-400">Sourdough with avocado and eggs</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$8.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-cheese text-yellow-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Breakfast Sandwich</div>
-                                                <div className="text-xs text-gray-400">Egg, cheese and bacon on croissant</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$7.25</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* desert */}
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-cookie text-pink-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Chocolate Croissant</div>
-                                                <div className="text-xs text-gray-400">Buttery pastry with chocolate</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$3.75</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-ice-cream text-pink-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Tiramisu</div>
-                                                <div className="text-xs text-gray-400">Coffee-flavored Italian dessert</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$5.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {activeTab === 'beverages' && (
-                            <div className="space-y-3">
-                                {/* beverage */}
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-coffee text-blue-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Espresso</div>
-                                                <div className="text-xs text-gray-400">Strong black coffee</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$3.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-mug-hot text-blue-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Cappuccino</div>
-                                                <div className="text-xs text-gray-400">Espresso with steamed milk</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$4.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-glass-whiskey text-blue-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Iced Latte</div>
-                                                <div className="text-xs text-gray-400">Cold coffee with milk</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$4.75</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {activeTab === 'food' && (
-                            <div className="space-y-3">
-                                {/* food items */}
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-bread-slice text-yellow-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Avocado Toast</div>
-                                                <div className="text-xs text-gray-400">Sourdough with avocado and eggs</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$8.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-cheese text-yellow-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Breakfast Sandwich</div>
-                                                <div className="text-xs text-gray-400">Egg, cheese and bacon on croissant</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$7.25</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {activeTab === 'dessert' && (
-                            <div className="space-y-3">
-                                {/* desert */}
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-cookie text-pink-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Chocolate Croissant</div>
-                                                <div className="text-xs text-gray-400">Buttery pastry with chocolate</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$3.75</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="menu-item-card p-4 bg-gray-800/50 rounded-lg">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-start space-x-3">
-                                            <div className="w-12 h-12 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                                                <i className="fas fa-ice-cream text-pink-400"></i>
-                                            </div>
-                                            <div>
-                                                <div className="font-medium">Tiramisu</div>
-                                                <div className="text-xs text-gray-400">Coffee-flavored Italian dessert</div>
-                                                <div className="mt-1 text-sm text-emerald-400">$5.50</div>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <button className="text-blue-400 hover:text-blue-300 p-1">
-                                                <i className="fas fa-edit"></i>
-                                            </button>
-                                            <button className="text-red-400 hover:text-red-300 p-1">
-                                                <i className="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                            ) : (
+                                filteredMenus.map(menu => (
+                                    <MenuCard
+                                        key={menu.id}
+                                        menu={menu}
+                                        onEdit={handleEditMenu}
+                                        onDelete={(item) => console.log("Delete", item)}
+                                    />
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
             {showModal && (
-                <Modal onClose={() => setShowModal(false)} title="New Menu Item">
-                    <div className="space-y-4">
-                        <form className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Item Name</label>
-                                    <input type="text" className="input-field w-full px-4 py-2 rounded-lg" placeholder="e.g. Espresso" />
-                                </div>
-                                <div>
-                                    <Select
-                                        label={'category'}
-                                        value={''}
-                                        onChange={(e) => { }}
-                                        options={[
-                                            { label: "Coffee & Cafe", value: "coffee" },
-                                            { label: "Fast Food", value: "fastfood" },
-                                            { label: "Restaurant", value: "restaurant" },
-                                            { label: "Desserts", value: "desserts" },
-                                            { label: "Beverages", value: "beverages" }]
-                                        }
-                                    />
-                                </div>
-                            </div>
-
+                <Modal onClose={() => setShowModal(false)} title={editMenuId ? "Edit Menu Item" : "New Menu Item"}>
+                    <form className="space-y-4" onSubmit={handleSaveMenu}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm text-gray-400 mb-1">Description</label>
-                                <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="2" placeholder="Brief description of the item"></textarea>
+                                <label className="block text-sm text-gray-400 mb-1">Item Name</label>
+                                <input
+                                    type="text"
+                                    className="input-field w-full px-4 py-2 rounded-lg"
+                                    value={menuForm.nama}
+                                    onChange={(e) => setMenuForm({ ...menuForm, nama: e.target.value })}
+                                />
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Price ($)</label>
-                                    <input type="number" step="0.01" className="input-field w-full px-4 py-2 rounded-lg" placeholder="0.00" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Preparation Time</label>
-                                    <input type="number" className="input-field w-full px-4 py-2 rounded-lg" placeholder="Minutes" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Calories</label>
-                                    <input type="number" className="input-field w-full px-4 py-2 rounded-lg" placeholder="kcal" />
-                                </div>
-                            </div>
-
                             <div>
-                                <label className="block text-sm text-gray-400 mb-1">Item Image</label>
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center">
+                                <Select
+                                    label={'category'}
+                                    value={menuForm.kategori}
+                                    onChange={(e) => setMenuForm({ ...menuForm, kategori: e.target.value })}
+                                    options={[
+                                        { label: "Beverage", value: "Beverage" },
+                                        { label: "Food", value: "Food" },
+                                        { label: "Dessert", value: "Dessert" },
+                                    ]}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Description</label>
+                            <textarea
+                                className="input-field w-full px-4 py-2 rounded-lg"
+                                rows="2"
+                                value={menuForm.deskripsi}
+                                onChange={(e) => setMenuForm({ ...menuForm, deskripsi: e.target.value })}
+                            ></textarea>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Price ($)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="input-field w-full px-4 py-2 rounded-lg"
+                                    value={menuForm.harga}
+                                    onChange={(e) => setMenuForm({ ...menuForm, harga: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <Select
+                                    label={'Status'}
+                                    value={menuForm.status}
+                                    onChange={(e) => setMenuForm({ ...menuForm, status: e.target.value })}
+                                    options={[
+                                        { label: "Tersedia", value: "Tersedia" },
+                                        { label: "Tidak Tersedia", value: "Tidak Tersedia" },
+                                    ]}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm text-gray-400 mb-1">Item Image</label>
+                            <div className="flex items-center space-x-4">
+                                <div className="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center">
+                                    {menuForm.imageFile ? (
+                                        <img src={URL.createObjectURL(menuForm.imageFile)} alt="Preview" className="w-full h-full object-cover rounded" />
+                                    ) : (
                                         <i className="fas fa-image text-gray-400"></i>
-                                    </div>
-                                    <button type="button" className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg">
-                                        Upload Image
-                                    </button>
+                                    )}
                                 </div>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    id="menu-image-input"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) setMenuForm({ ...menuForm, imageFile: file });
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg"
+                                    onClick={() => document.getElementById('menu-image-input').click()}
+                                >
+                                    Upload Image
+                                </button>
                             </div>
+                        </div>
 
-                            <div className="flex justify-end space-x-3 pt-4">
-                                <Button variant="neutral" size="large" onClick={() => setShowModal(prev => !prev)}>
-                                    Cancel
-                                </Button>
-                                <Button variant="primary" icon="fas fa-save mr-2" size="large" onClick={() => setShowModal(prev => !prev)}>
-                                    Save Item
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
+                        <div className="flex justify-end space-x-3 pt-4">
+                            <Button variant="neutral" size="large" onClick={() => setShowModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" icon="fas fa-save mr-2" size="large" type="submit">
+                                Save Item
+                            </Button>
+                        </div>
+                    </form>
                 </Modal>
             )}
         </>

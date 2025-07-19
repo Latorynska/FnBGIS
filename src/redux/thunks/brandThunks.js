@@ -79,3 +79,72 @@ export const updateBrand = createAsyncThunk(
         }
     }
 );
+
+// FETCH MENUS
+export const fetchMenus = createAsyncThunk('menu/fetch', async (brandId, thunkAPI) => {
+  try {
+    const menuCol = collection(db, 'brands', brandId, 'menus');
+    const snapshot = await getDocs(menuCol);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.message);
+  }
+});
+
+// SAVE MENU
+export const saveMenu = createAsyncThunk('menu/save', async ({ brandId, data }, thunkAPI) => {
+  try {
+    let gambarUrl = '';
+    if (data.imageFile) {
+      const storage = getStorage();
+      const fileName = `${Date.now()}-${data.imageFile.name}`;
+      const path = `menus/${brandId}/${fileName}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, data.imageFile);
+      gambarUrl = await getDownloadURL(storageRef);
+    }
+
+    const newMenu = {
+      nama: data.nama,
+      kategori: data.kategori,
+      deskripsi: data.deskripsi,
+      harga: data.harga,
+      status: data.status,
+      gambarUrl,
+    };
+
+    const docRef = await addDoc(collection(db, 'brands', brandId, 'menus'), newMenu);
+    return { id: docRef.id, ...newMenu };
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.message);
+  }
+});
+
+// UPDATE MENU
+export const updateMenu = createAsyncThunk('menu/update', async ({ brandId, id, data }, thunkAPI) => {
+  try {
+    const docRef = doc(db, 'brands', brandId, 'menus', id);
+
+    const updatedData = {
+      nama: data.nama,
+      kategori: data.kategori,
+      deskripsi: data.deskripsi,
+      harga: data.harga,
+      status: data.status,
+    };
+
+    if (data.imageFile) {
+      const storage = getStorage();
+      const fileName = `${Date.now()}-${data.imageFile.name}`;
+      const path = `menus/${brandId}/${fileName}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, data.imageFile);
+      updatedData.gambarUrl = await getDownloadURL(storageRef);
+    }
+
+    await updateDoc(docRef, updatedData);
+    return { id, ...updatedData };
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.message);
+  }
+});
