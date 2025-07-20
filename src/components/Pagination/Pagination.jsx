@@ -95,7 +95,7 @@ const Pagination = ({ dataList, itemsPerPage, setCurrentData, numberingData }) =
 
     return (
         <div className="d-flex justify-content-center mt-4 mb-4 gap-2">
-            <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm"
+            <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm mx-1"
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}>
                 Previous
@@ -114,7 +114,7 @@ const Pagination = ({ dataList, itemsPerPage, setCurrentData, numberingData }) =
                 </button>
             ))}
 
-            <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm"
+            <button className="px-3 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm mx-1"
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}>
                 Next
