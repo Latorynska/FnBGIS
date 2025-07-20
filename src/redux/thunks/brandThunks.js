@@ -1,8 +1,9 @@
-import { collection, getDocs, query, where, limit, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { getAuth } from 'firebase/auth';
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { deleteObject, getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+import { getPathFromFirebaseUrl } from '../../utils/firebaseUtils';
 
 export const fetchBrands = createAsyncThunk('brand/fetch', async (_, thunkAPI) => {
     const auth = getAuth();
@@ -52,7 +53,7 @@ export const updateBrand = createAsyncThunk(
                 await uploadBytes(storageRef, data.logoFile);
                 iconUrl = await getDownloadURL(storageRef);
                 if (data.prevIconUrl) {
-                    const prevPath = data.prevIconUrl.split('/o/')[1]?.split('?')[0]; 
+                    const prevPath = data.prevIconUrl.split('/o/')[1]?.split('?')[0];
                     const decodedPath = decodeURIComponent(prevPath);
                     const oldRef = ref(storage, decodedPath);
                     await deleteObject(oldRef).catch(() => {
@@ -82,69 +83,105 @@ export const updateBrand = createAsyncThunk(
 
 // FETCH MENUS
 export const fetchMenus = createAsyncThunk('menu/fetch', async (brandId, thunkAPI) => {
-  try {
-    const menuCol = collection(db, 'brands', brandId, 'menus');
-    const snapshot = await getDocs(menuCol);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
-  }
+    try {
+        const menuCol = collection(db, 'brands', brandId, 'menus');
+        const snapshot = await getDocs(menuCol);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.message);
+    }
 });
 
-// SAVE MENU
 export const saveMenu = createAsyncThunk('menu/save', async ({ brandId, data }, thunkAPI) => {
-  try {
-    let gambarUrl = '';
-    if (data.imageFile) {
-      const storage = getStorage();
-      const fileName = `${Date.now()}-${data.imageFile.name}`;
-      const path = `menus/${brandId}/${fileName}`;
-      const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, data.imageFile);
-      gambarUrl = await getDownloadURL(storageRef);
+    try {
+        let gambarUrl = '';
+        if (data.imageFile) {
+            const storage = getStorage();
+            const fileName = `${Date.now()}-${data.imageFile.name}`;
+            const path = `menus/${brandId}/${fileName}`;
+            const storageRef = ref(storage, path);
+            await uploadBytes(storageRef, data.imageFile);
+            gambarUrl = await getDownloadURL(storageRef);
+        }
+
+        const newMenu = {
+            nama: data.nama,
+            kategori: data.kategori,
+            deskripsi: data.deskripsi,
+            harga: data.harga,
+            status: data.status,
+            gambarUrl,
+        };
+
+        const docRef = await addDoc(collection(db, 'brands', brandId, 'menus'), newMenu);
+        return { id: docRef.id, ...newMenu };
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.message);
     }
-
-    const newMenu = {
-      nama: data.nama,
-      kategori: data.kategori,
-      deskripsi: data.deskripsi,
-      harga: data.harga,
-      status: data.status,
-      gambarUrl,
-    };
-
-    const docRef = await addDoc(collection(db, 'brands', brandId, 'menus'), newMenu);
-    return { id: docRef.id, ...newMenu };
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
-  }
 });
 
 // UPDATE MENU
 export const updateMenu = createAsyncThunk('menu/update', async ({ brandId, id, data }, thunkAPI) => {
-  try {
-    const docRef = doc(db, 'brands', brandId, 'menus', id);
+    try {
+        let gambarUrl = data.gambarUrl;
 
-    const updatedData = {
-      nama: data.nama,
-      kategori: data.kategori,
-      deskripsi: data.deskripsi,
-      harga: data.harga,
-      status: data.status,
-    };
+        if (data.imageFile) {
+            const storage = getStorage();
+            const fileName = `${Date.now()}-${data.imageFile.name}`;
+            const path = `menus/${brandId}/${fileName}`;
+            const storageRef = ref(storage, path);
 
-    if (data.imageFile) {
-      const storage = getStorage();
-      const fileName = `${Date.now()}-${data.imageFile.name}`;
-      const path = `menus/${brandId}/${fileName}`;
-      const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, data.imageFile);
-      updatedData.gambarUrl = await getDownloadURL(storageRef);
+            await uploadBytes(storageRef, data.imageFile);
+            gambarUrl = await getDownloadURL(storageRef);
+            if (data.gambarUrl) {
+                const prevPath = data.gambarUrl.split('/o/')[1]?.split('?')[0];
+                const decodedPath = decodeURIComponent(prevPath);
+                const oldRef = ref(storage, decodedPath);
+                await deleteObject(oldRef).catch(() =>
+                    console.warn("Gagal hapus gambar lama, mungkin sudah tidak ada")
+                );
+            }
+        }
+
+        const updatedData = {
+            nama: data.nama,
+            kategori: data.kategori,
+            deskripsi: data.deskripsi,
+            harga: data.harga,
+            status: data.status,
+            gambarUrl,
+        };
+
+        const docRef = doc(db, 'brands', brandId, 'menus', id);
+        await updateDoc(docRef, updatedData);
+
+        return { id, ...updatedData };
+    } catch (error) {
+        return thunkAPI.rejectWithValue(error.message);
     }
-
-    await updateDoc(docRef, updatedData);
-    return { id, ...updatedData };
-  } catch (error) {
-    return thunkAPI.rejectWithValue(error.message);
-  }
 });
+
+export const deleteMenu = createAsyncThunk(
+    'menu/delete',
+    async ({ brandId, id, gambarUrl }, thunkAPI) => {
+        try {
+            if (gambarUrl) {
+                const storage = getStorage();
+                const path = gambarUrl.split('/o/')[1]?.split('?')[0];
+                const decodedPath = decodeURIComponent(path);
+                const imageRef = ref(storage, decodedPath);
+
+                await deleteObject(imageRef).catch(() =>
+                    console.warn("Gagal hapus gambar menu, mungkin sudah tidak ada")
+                );
+            }
+            const docRef = doc(db, 'brands', brandId, 'menus', id);
+            await deleteDoc(docRef);
+
+            return id;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error.message);
+        }
+    }
+);
+

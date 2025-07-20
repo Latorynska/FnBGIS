@@ -4,11 +4,12 @@ import Select from '../../components/Select/Select';
 import Button from '../../components/Button/Button';
 import Modal from '../../components/Modal/Modal';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchBrands, fetchMenus, saveBrand, saveMenu, updateBrand, updateMenu } from '../../redux/thunks/brandThunks';
+import { deleteMenu, fetchBrands, fetchMenus, saveBrand, saveMenu, updateBrand, updateMenu } from '../../redux/thunks/brandThunks';
 import { FaImage } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import CardLoadingOverlay from '../../components/CardLoadingOverlay/CardLoadingOverlay';
 import MenuCard from '../../components/MenuCard/MenuCard';
+import { resizeImage } from '../../utils/generalUtils';
 
 
 
@@ -22,10 +23,12 @@ const ManageBrandInformation = () => {
         nama: '', kategori: '', kode: '', deskripsi: '', website: '', email: '', logoFile: null, iconUrl: ''
     });
     const [menuForm, setMenuForm] = useState({
-        nama: '', kategori: '', deskripsi: '', harga: '', status: '', imageFile: null
+        nama: '', kategori: 'Food', deskripsi: '', harga: '', status: '', imageFile: null, gambarUrl: '', status: 'Tersedia',
     });
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [menuToDelete, setMenuToDelete] = useState(null);
 
-    const { items: brands, loading } = useSelector(state => state.brand);
+    const { loading } = useSelector(state => state.brand);
     const { items: menus, loading: menuLoading } = useSelector(state => state.menu);
 
     const tabToKategori = {
@@ -36,20 +39,29 @@ const ManageBrandInformation = () => {
     const filteredMenus = menus.filter(menu =>
         activeTab === 'all' ? true : menu.kategori === tabToKategori[activeTab]
     );
-
     useEffect(() => {
-        dispatch(fetchBrands());
+        const fetchData = async () => {
+            const action = await dispatch(fetchBrands());
+
+            if (fetchBrands.fulfilled.match(action)) {
+                const firstBrand = action.payload[0];
+                if (firstBrand) {
+                    setBrand(firstBrand);
+                    dispatch(fetchMenus(firstBrand.id));
+                }
+            }
+        };
+
+        fetchData();
     }, [dispatch]);
-
-    useEffect(() => {
-        if (brands.length > 0) {
-            setBrand(brands[0]);
-            dispatch(fetchMenus(brands[0].id));
-        }
-    }, [brands, dispatch]);
-
-    const handleSaveBrand = (e) => {
+    const handleSaveBrand = async (e) => {
         e.preventDefault();
+
+        if (!brand.nama || !brand.kategori) {
+            toast.error('Nama dan kategori brand wajib diisi.');
+            return;
+        }
+
         const brandData = {
             nama: brand.nama,
             kategori: brand.kategori,
@@ -60,28 +72,55 @@ const ManageBrandInformation = () => {
             prevIconUrl: brand.iconUrl || null,
         };
 
-        if (brand.id) {
-            dispatch(updateBrand({ id: brand.id, data: brandData }));
-        } else {
-            dispatch(saveBrand(brandData));
+        try {
+            if (brand.id) {
+                await dispatch(updateBrand({ id: brand.id, data: brandData })).unwrap();
+                toast.success('Brand berhasil diperbarui');
+            } else {
+                await dispatch(saveBrand(brandData)).unwrap();
+                toast.success('Brand berhasil disimpan');
+            }
+
+            setBrand({ ...brand, logoFile: null });
+        } catch (error) {
+            toast.error('Gagal menyimpan brand: ' + error);
         }
-
-        setBrand({ ...brand, logoFile: null });
     };
-
-    const handleSaveMenu = (e) => {
+    const handleSaveMenu = async (e) => {
         e.preventDefault();
         if (!brand.id) return;
 
+        let resizedImage = null;
+        if (menuForm.imageFile) {
+            try {
+                resizedImage = await resizeImage(menuForm.imageFile);
+            } catch (err) {
+                toast.error("Gagal resize gambar: " + err.message);
+                return;
+            }
+        }
+
+        const dataToSend = {
+            ...menuForm,
+            imageFile: resizedImage,
+            gambarUrl: menuForm.gambarUrl || '',
+        };
+
         if (editMenuId) {
-            dispatch(updateMenu({ brandId: brand.id, id: editMenuId, data: menuForm }));
+            dispatch(updateMenu({ brandId: brand.id, id: editMenuId, data: dataToSend }))
+                .unwrap()
+                .then(() => toast.success("Menu berhasil diperbarui"))
+                .catch((err) => toast.error("Gagal update: " + err));
         } else {
-            dispatch(saveMenu({ brandId: brand.id, data: menuForm }));
+            dispatch(saveMenu({ brandId: brand.id, data: dataToSend }))
+                .unwrap()
+                .then(() => toast.success("Menu berhasil ditambahkan"))
+                .catch((err) => toast.error("Gagal simpan: " + err));
         }
 
         setShowModal(false);
         setEditMenuId(null);
-        setMenuForm({ nama: '', kategori: '', deskripsi: '', harga: '', status: '', imageFile: null });
+        setMenuForm({ nama: '', kategori: '', deskripsi: '', harga: '', status: '', imageFile: null, gambarUrl: '' });
     };
 
     const handleEditMenu = (menu) => {
@@ -92,10 +131,32 @@ const ManageBrandInformation = () => {
             deskripsi: menu.deskripsi,
             harga: menu.harga,
             status: menu.status,
-            imageFile: null
+            imageFile: null,
+            gambarUrl: menu.gambarUrl,
         });
         setShowModal(true);
     };
+    const handleDeleteClick = (menu) => {
+        setMenuToDelete(menu);
+        setShowDeleteConfirm(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!menuToDelete || !brand.id) return;
+
+        dispatch(deleteMenu({ brandId: brand.id, id: menuToDelete.id, gambarUrl: menuToDelete.gambarUrl }))
+            .unwrap()
+            .then(() => {
+                toast.success('Menu berhasil dihapus');
+            })
+            .catch((err) => {
+                toast.error('Gagal menghapus menu: ' + err);
+            });
+
+        setShowDeleteConfirm(false);
+        setMenuToDelete(null);
+    };
+
 
     return (
         <>
@@ -250,9 +311,6 @@ const ManageBrandInformation = () => {
                         </div>
 
                         <div className="flex justify-end space-x-3 pt-4">
-                            <button type="button" className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
-                                Cancel
-                            </button>
                             <button type="submit" className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 flex items-center">
                                 <i className="fas fa-save mr-2"></i> Save Changes
                             </button>
@@ -261,7 +319,7 @@ const ManageBrandInformation = () => {
                 </div>
                 {/* menu items */}
                 <div className="card p-6">
-                    <CardLoadingOverlay isVisible={menuLoading} />
+                    <CardLoadingOverlay isVisible={menuLoading || loading} />
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold">Menu Items</h3>
                         <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => {
@@ -302,7 +360,7 @@ const ManageBrandInformation = () => {
                                         key={menu.id}
                                         menu={menu}
                                         onEdit={handleEditMenu}
-                                        onDelete={(item) => console.log("Delete", item)}
+                                        onDelete={handleDeleteClick}
                                     />
                                 ))
                             )}
@@ -326,7 +384,8 @@ const ManageBrandInformation = () => {
                             <div>
                                 <Select
                                     label={'category'}
-                                    value={menuForm.kategori}
+                                    value={menuForm.kategori || "Food"}
+                                    placeholder='Pilih Kategori'
                                     onChange={(e) => setMenuForm({ ...menuForm, kategori: e.target.value })}
                                     options={[
                                         { label: "Beverage", value: "Beverage" },
@@ -347,7 +406,7 @@ const ManageBrandInformation = () => {
                             ></textarea>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Price ($)</label>
                                 <input
@@ -361,7 +420,8 @@ const ManageBrandInformation = () => {
                             <div>
                                 <Select
                                     label={'Status'}
-                                    value={menuForm.status}
+                                    value={menuForm.status || "Tersedia"}
+                                    placeholder='Pilih status'
                                     onChange={(e) => setMenuForm({ ...menuForm, status: e.target.value })}
                                     options={[
                                         { label: "Tersedia", value: "Tersedia" },
@@ -374,13 +434,24 @@ const ManageBrandInformation = () => {
                         <div>
                             <label className="block text-sm text-gray-400 mb-1">Item Image</label>
                             <div className="flex items-center space-x-4">
-                                <div className="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center">
+                                <div className="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center overflow-hidden">
                                     {menuForm.imageFile ? (
-                                        <img src={URL.createObjectURL(menuForm.imageFile)} alt="Preview" className="w-full h-full object-cover rounded" />
+                                        <img
+                                            src={URL.createObjectURL(menuForm.imageFile)}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover rounded"
+                                        />
+                                    ) : menuForm.gambarUrl ? (
+                                        <img
+                                            src={menuForm.gambarUrl}
+                                            alt="Current"
+                                            className="w-full h-full object-cover rounded"
+                                        />
                                     ) : (
-                                        <i className="fas fa-image text-gray-400"></i>
+                                        <i className="fas fa-image text-gray-400 text-xl"></i>
                                     )}
                                 </div>
+
                                 <input
                                     type="file"
                                     accept="image/*"
@@ -412,6 +483,20 @@ const ManageBrandInformation = () => {
                     </form>
                 </Modal>
             )}
+            {showDeleteConfirm && (
+                <Modal onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus Menu">
+                    <p className="text-sm text-gray-300 mb-4">
+                        Apakah Anda yakin ingin menghapus menu <strong>{menuToDelete?.nama}</strong>?
+                    </p>
+                    <div className="flex justify-end space-x-3 pt-4">
+                        <Button variant="neutral" size='medium' onClick={() => setShowDeleteConfirm(false)}>Batal</Button>
+                        <Button variant="danger" size='medium' icon="fas fa-trash" onClick={handleConfirmDelete}>
+                            Hapus
+                        </Button>
+                    </div>
+                </Modal>
+            )}
+
         </>
     );
 }

@@ -1,8 +1,19 @@
-import React from 'react';
+import { useEffect } from 'react';
 
 const Modal = ({ title, children, onClose }) => {
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={onClose}
+        >
             <div
                 className="rounded-lg w-full max-w-md p-6 relative"
                 style={{
@@ -12,6 +23,7 @@ const Modal = ({ title, children, onClose }) => {
                     boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
                     border: "1px solid rgba(255, 255, 255, 0.1)"
                 }}
+                onClick={(e) => e.stopPropagation()}
             >
                 <button
                     onClick={onClose}
