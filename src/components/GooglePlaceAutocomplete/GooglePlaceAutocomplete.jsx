@@ -26,10 +26,11 @@ const GooglePlaceAutocomplete = ({ onPlaceSelected, initialText = '' }) => {
 
   // Set value awal dari prop (sekali saja)
   useEffect(() => {
-    if (inputRef.current && initialText) {
-      inputRef.current.value = initialText;
+    if (inputRef.current) {
+      inputRef.current.value = initialText || '';
     }
   }, [initialText]);
+
 
   return (
     <div className="relative w-full">

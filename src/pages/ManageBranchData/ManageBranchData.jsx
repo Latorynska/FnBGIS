@@ -19,159 +19,256 @@ import CardLoadingOverlay from "../../components/CardLoadingOverlay/CardLoadingO
 import { fetchBranches, saveBranch, updateBranch } from "../../redux/thunks/branchThunks";
 import toast from "react-hot-toast";
 
+const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', };
+
 const ManageBranchData = () => {
     const dispatch = useDispatch();
-    const [showModal, setShowModal] = useState(false);
-    const [newBranchName, setNewBranchName] = useState('');
+    if (L && L.GeometryUtil && L.GeometryUtil.readableArea) {
+        L.GeometryUtil.readableArea = function (area, isMetric) {
+            let areaStr;
+            if (isMetric) {
+                areaStr = area >= 1000000
+                    ? (area / 1000000).toFixed(2) + ' km²'
+                    : area.toFixed(2) + ' m²';
+            } else {
+                area *= 0.000247105; // acres
+                areaStr = area >= 1
+                    ? area.toFixed(2) + ' acres'
+                    : (area * 43560).toFixed(2) + ' ft²';
+            }
+            return areaStr;
+        };
+    }
+    const mapRef = useRef(null);
+    const leafletMap = useRef(null);
+    const editLayerRef = useRef(null);
+    const drawControlRef = useRef(null);
+    const drawnLayerRef = useRef(null);
+    const drawnItemsRef = useRef(new L.FeatureGroup());
 
+
+    const [mapMode, setMapMode] = useState(null); // 'view' | 'edit'
     const [currentBranchesData, setCurrentBranchesData] = useState([]);
-    const [branchForm, setBranchForm] = useState({ nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalValiditas: '', detailAlamat: '', tanggalOpening: '', tanggalValiditas: '', });
+    const [branchForm, setBranchForm] = useState(defaultBranchForm);
     const [activeForm, setActiveForm] = useState('details');
     const [selectedPlace, setSelectedPlace] = useState(null);
-
-    const [newPolygon, setNewPolygon] = useState(null);
-    const mapRef = useRef(null);
-    const drawControlRef = useRef(null);
-    const drawnItemsRef = useRef(new L.FeatureGroup());
+    const [selectedArea, setSelectedArea] = useState(null);
 
     const { items: branches, loading: loadingBranch, error } = useSelector(state => state.branch);
 
     useEffect(() => {
-        dispatch(fetchBranches());
+        dispatch(fetchBranches())
+            .unwrap()
+            .catch(err => toast.error('Gagal fetch cabang: ' + err));
     }, [dispatch]);
-    useEffect(() => {
-        if (!mapRef.current || mapRef.current._leaflet_map_instance) return;
 
-        const map = L.map(mapRef.current).setView([-6.9175, 107.6191], 12);
-        mapRef.current._leaflet_map_instance = map;
+    const renderBranchesToMap = () => {
+        if (!leafletMap.current) return;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-        }).addTo(map);
-
-        map.addLayer(drawnItemsRef.current);
-
-        drawControlRef.current = new L.Control.Draw({
-            draw: {
-                polygon: true,
-                polyline: false,
-                rectangle: false,
-                circle: false,
-                marker: false,
-                circlemarker: false,
-            },
-            edit: false,
+        leafletMap.current.eachLayer(layer => {
+            if (layer instanceof L.Polygon) leafletMap.current.removeLayer(layer);
         });
 
-        branches.forEach((branch) => {
-            const hasCoordinates =
-                typeof branch.lat === 'number' && typeof branch.lng === 'number';
-            const hasArea =
-                Array.isArray(branch.area) &&
-                branch.area.length > 0 &&
-                Array.isArray(branch.area[0]) &&
-                typeof branch.area[0][0] === 'number' &&
-                typeof branch.area[0][1] === 'number';
-            if (!hasCoordinates) return;
+        branches.forEach(branch => {
+            if (!branch.area || !branch.area.length) return;
 
-            const color =
-                branch.status === 'active'
-                    ? '#10B981'
-                    : branch.status === 'warning'
-                        ? '#F59E0B'
-                        : '#EF4444';
+            const polygon = L.polygon(branch.area, {
+                color: 'blue', weight: 2, fillColor: 'lightblue', fillOpacity: 0.5
+            }).addTo(leafletMap.current);
 
-            const popupContent = `
-        <div>
-          <h3 class="font-bold mb-1">${branch.name}</h3>
-          <div class="text-sm">Revenue: $${branch.revenue?.toLocaleString?.() || 0}</div>
-          <div class="text-sm">Customers: ${branch.customers ?? 0}</div>
-        </div>
-      `;
-            const marker = L.marker([branch.lat, branch.lng], {
-                icon: L.divIcon({
-                    html: `<div style="color: ${color}; font-size: 24px;"><i class="fas fa-map-marker-alt"></i></div>`,
-                    className: 'map-marker-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 24],
-                }),
-            }).addTo(map);
-            marker.bindPopup(popupContent);
-
-            if (hasArea) {
-                const polygon = L.polygon(branch.area, {
-                    color,
-                    fillColor: color,
-                    fillOpacity: 0.2,
-                    weight: 2,
-                }).addTo(map);
-
-                polygon.bindPopup(popupContent);
-                polygon.on('mouseover', () =>
-                    polygon.setStyle({ weight: 4, fillOpacity: 0.3 })
-                );
-                polygon.on('mouseout', () =>
-                    polygon.setStyle({ weight: 2, fillOpacity: 0.2 })
-                );
-            }
-        });
-
-
-        map.on('draw:created', function (event) {
-            const layer = event.layer;
-            const latlngs = layer.getLatLngs()[0];
-            setNewPolygon({
-                layer,
-                latlngs: latlngs.map(coord => [coord.lat, coord.lng]),
+            polygon.bindPopup(`<b>${branch.nama}</b>`);
+            polygon.on('click', () => {
+                setSelectedArea({ name: branch.nama, coordinates: branch.area });
+                setBranchForm({ ...branch });
             });
-            setShowModal(true);
-            map.removeControl(drawControlRef.current);
         });
+    };
+
+    useEffect(() => {
+        if (!leafletMap.current && mapRef.current) {
+            leafletMap.current = L.map(mapRef.current).setView([-6.9, 107.6], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(leafletMap.current);
+
+            leafletMap.current.addLayer(drawnItemsRef.current);
+        }
+
+        renderBranchesToMap();
+
+        return () => {
+            if (leafletMap.current) {
+                leafletMap.current.remove();
+                leafletMap.current = null;
+            }
+        };
     }, [branches]);
+
+    const handleLihatLokasi = () => {
+        setMapMode('view');
+        if (branchForm.area?.length && leafletMap.current) {
+            leafletMap.current.fitBounds(branchForm.area);
+        }
+    };
+
+    const handleUbahCakupanArea = () => {
+        if (!leafletMap.current) return;
+        setMapMode('edit');
+
+        if (drawControlRef.current) {
+            leafletMap.current.removeControl(drawControlRef.current);
+            drawControlRef.current = null;
+        }
+
+        if (!branchForm.area?.length) {
+            // MODE: DRAW NEW
+            drawControlRef.current = new L.Control.Draw({
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        showArea: true,
+                        shapeOptions: { color: 'red' }
+                    },
+                    polyline: false,
+                    rectangle: false,
+                    circle: false,
+                    marker: false,
+                    circlemarker: false,
+                },
+                edit: false,
+            });
+
+            leafletMap.current.addControl(drawControlRef.current);
+
+            const onCreate = async (event) => {
+                const layer = event.layer;
+                const latlngs = layer.getLatLngs()[0];
+                const coords = latlngs.map(p => [p.lat, p.lng]);
+
+                layer.addTo(drawnItemsRef.current);
+                drawnItemsRef.current.addLayer(layer);
+
+                setSelectedArea({ coordinates: coords });
+                setBranchForm(prev => ({ ...prev, area: coords }));
+
+                try {
+                    const updated = { ...branchForm, area: coords };
+                    await dispatch(updateBranch({ id: updated.id, data: updated })).unwrap();
+                    toast.success("Area cabang berhasil diperbarui");
+                } catch (err) {
+                    toast.error("Gagal update area cabang: " + err);
+                }
+
+                leafletMap.current.off('draw:created', onCreate);
+                leafletMap.current.removeControl(drawControlRef.current);
+                drawControlRef.current = null;
+                setMapMode(null);
+            };
+
+
+            leafletMap.current.on('draw:created', onCreate);
+
+            // Auto trigger polygon draw button
+            setTimeout(() => {
+                document.querySelector('.leaflet-draw-draw-polygon')?.click();
+            }, 250);
+
+        } else {
+            // MODE: EDIT EXISTING ala MapMetadata
+            if (editLayerRef.current) {
+                leafletMap.current.removeLayer(editLayerRef.current);
+            }
+
+            const polygon = L.polygon(branchForm.area, {
+                color: 'red',
+                weight: 2,
+                fillColor: 'orange',
+                fillOpacity: 0.6,
+            }).addTo(leafletMap.current);
+
+            editLayerRef.current = polygon;
+
+            const drawControl = new L.EditToolbar.Edit(leafletMap.current, {
+                featureGroup: L.featureGroup([polygon])
+            });
+
+            drawControl.enable();
+
+            polygon.on('edit', () => {
+                const latlngs = polygon.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
+                setSelectedArea({ coordinates: latlngs });
+            });
+        }
+    };
+
+
+    const handleSimpanArea = async () => {
+        if (!selectedArea || !selectedArea.coordinates?.length) return;
+
+        const updated = { ...branchForm, area: selectedArea.coordinates };
+        setBranchForm(updated);
+        setMapMode(null);
+
+        if (editLayerRef.current) {
+            leafletMap.current.removeLayer(editLayerRef.current);
+            editLayerRef.current = null;
+        }
+
+        if (drawControlRef.current) {
+            leafletMap.current.removeControl(drawControlRef.current);
+            drawControlRef.current = null;
+        }
+
+        try {
+            await dispatch(updateBranch({ id: updated.id, data: updated })).unwrap();
+            toast.success("Area cabang berhasil diperbarui");
+        } catch (err) {
+            toast.error("Gagal simpan area: " + err);
+        }
+    };
+
+
+    const handleBatalEdit = () => {
+        setMapMode(null);
+
+        if (editLayerRef.current) {
+            leafletMap.current.removeLayer(editLayerRef.current);
+            editLayerRef.current = null;
+        }
+
+        if (drawnLayerRef.current) {
+            leafletMap.current.removeLayer(drawnLayerRef.current);
+            drawnLayerRef.current = null;
+        }
+
+        if (drawControlRef.current && leafletMap.current) {
+            leafletMap.current.removeControl(drawControlRef.current);
+            drawControlRef.current = null;
+        }
+    };
+
     const handleSaveBranch = async (e) => {
         e.preventDefault();
-
         if (!branchForm.nama || !branchForm.kode) {
-            toast.error("Nama dan kode cabang wajib diisi");
+            toast.error("Nama dan kode wajib diisi");
             return;
         }
 
-        const dataToSend = {
-            ...branchForm,
-        };
-
-        const isUpdate = !!branchForm.id;
-
-        const action = isUpdate
-            ? updateBranch({ id: branchForm.id, data: dataToSend })
-            : saveBranch(dataToSend);
+        const action = branchForm.id
+            ? updateBranch({ id: branchForm.id, data: branchForm })
+            : saveBranch(branchForm);
 
         dispatch(action)
             .unwrap()
             .then(() => {
-                toast.success(`Cabang berhasil ${isUpdate ? "diperbarui" : "ditambahkan"}`);
-                setBranchForm({
-                    nama: '',
-                    kode: '',
-                    afiliasi: '',
-                    telp: '',
-                    email: '',
-                    placeId: '',
-                    area: [],
-                    manajer: '',
-                    telpManajer: '',
-                    emailManajer: '',
-                    establishedDate: '',
-                    tanggalOpening: '',
-                    tanggalValiditas: '',
-                    detailAlamat: '',
-                });
+                toast.success(`Cabang berhasil ${branchForm.id ? 'diperbarui' : 'ditambahkan'}`);
+                setBranchForm(defaultBranchForm);
                 setSelectedPlace(null);
+                dispatch(fetchBranches());
             })
-            .catch((err) => {
-                toast.error(`Gagal ${isUpdate ? "update" : "simpan"}: ${err}`);
-            });
+            .catch((err) => toast.error("Gagal simpan: " + err));
     };
+
     const handleRowClick = (e) => {
         const row = e.target.closest("tr[data-branch-index]");
         if (!row) return; // Bukan klik pada row yang valid
@@ -195,6 +292,8 @@ const ManageBranchData = () => {
                 {/* map ui */}
                 <div className="lg:col-span-5">
                     <div className="card p-4 h-full">
+
+                        <CardLoadingOverlay isVisible={loadingBranch} />
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-medium">Branch Locations</h3>
                         </div>
@@ -205,6 +304,14 @@ const ManageBranchData = () => {
                                 id="map"
                             />
                         </div>
+
+                        {/* hanya aktif ketika sedang edit area */}
+                        {mapMode === 'edit' && (
+                            <div className="flex justify-end gap-2 mt-2">
+                                <Button variant='neutral' onClick={handleBatalEdit}>Batal</Button>
+                                <Button variant='primary' onClick={handleSimpanArea}>Simpan</Button>
+                            </div>
+                        )}
                     </div>
                 </div>
                 {/* chart */}
@@ -231,11 +338,18 @@ const ManageBranchData = () => {
                         <CardLoadingOverlay isVisible={loadingBranch} />
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-medium">All Branches</h3>
-                            <div className="flex space-x-2">
-                                <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => setShowModal(prev => !prev)}
-                                >
-                                    Tambah Area Cabang
-                                </Button>
+                            <div className="flex space-x-2"><Button
+                                variant="primary"
+                                size="small"
+                                icon="fas fa-plus"
+                                onClick={() => {
+                                    setBranchForm(defaultBranchForm);
+                                    setActiveForm("details");
+                                    setSelectedPlace(null);
+                                }}
+                            >
+                                Tambah Cabang Baru
+                            </Button>
                                 <button className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg flex items-center">
                                     <i className="fas fa-filter mr-1"></i> Filter
                                 </button>
@@ -490,7 +604,7 @@ const ManageBranchData = () => {
                                             variant="neutral"
                                             size="medium"
                                             className="mb-2"
-                                        // onClick={handleLihatLokasi}
+                                            onClick={handleLihatLokasi}
                                         // disabled={!selectedArea}
                                         >
                                             Lihat Lokasi
@@ -500,7 +614,7 @@ const ManageBranchData = () => {
                                             type="button"
                                             variant="neutral"
                                             size="medium"
-                                        // onClick={handleUbahCakupanArea}
+                                            onClick={handleUbahCakupanArea}
                                         // disabled={!selectedArea}
                                         >
                                             Ubah Cakupan Area
@@ -515,16 +629,16 @@ const ManageBranchData = () => {
                                         >
                                             Hapus
                                         </Button>
-
                                         <Button
                                             variant="neutral"
                                             size="medium"
-                                        // onClick={handleCancelForm}
-                                        // disabled={!selectedArea}
+                                            onClick={() => {
+                                                setBranchForm(defaultBranchForm);
+                                                setSelectedPlace(null);
+                                            }}
                                         >
                                             Cancel
                                         </Button>
-
                                         <Button
                                             variant="primary"
                                             size="medium"
@@ -774,25 +888,6 @@ const ManageBranchData = () => {
                     )}
                 </div>
             </div>
-
-            {showModal && (
-                <Modal onClose={() => setShowModal(false)} title="Nama Cabang Baru">
-                    <div className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Nama Cabang"
-                            className="w-full px-4 py-2 border rounded"
-                            value={newBranchName}
-                            onChange={(e) => setNewBranchName(e.target.value)}
-                        />
-                        <button
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                        >
-                            Simpan Cabang
-                        </button>
-                    </div>
-                </Modal>
-            )}
             {/* {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Nama Cabang Baru">
                     <div className="space-y-4">
