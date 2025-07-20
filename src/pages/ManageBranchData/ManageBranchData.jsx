@@ -11,6 +11,7 @@ import Modal from "../../components/Modal/Modal";
 import Pagination from "../../components/Pagination/Pagination";
 import './ManageBranch.css';
 import BarChart from "../../components/Charts/BarChart";
+import GooglePlaceAutocomplete from "../../components/GooglePlaceAutocomplete/GooglePlaceAutocomplete";
 
 const initialBranches = [
     {
@@ -175,10 +176,11 @@ const ManageBranchData = () => {
     const [showModal, setShowModal] = useState(false);
     const [newBranchName, setNewBranchName] = useState('');
 
-
     const [branches, setBranches] = useState(initialBranches);
     const [currentBranchesData, setCurrentBranchesData] = useState([]);
+    const [branchForm, setbranchForm] = useState({});
     const [activeForm, setActiveForm] = useState('details');
+    const [selectedPlace, setSelectedPlace] = useState(null);
 
     const [newPolygon, setNewPolygon] = useState(null);
     const mapRef = useRef(null);
@@ -698,6 +700,22 @@ const ManageBranchData = () => {
                                 <div>
                                     <label className="block text-sm text-gray-400 mb-1">Description</label>
                                     <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="3"></textarea>
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Pilih Lokasi Cabang</label>
+                                    <GooglePlaceAutocomplete
+                                        onPlaceSelected={(place) => {
+                                            setSelectedPlace(place);
+                                            setbranchForm(prev => ({
+                                                ...prev,
+                                                placeId: place.place_id,
+                                                placeName: place.name,
+                                                placeAddress: place.formatted_address,
+                                                lat: place.geometry?.location?.lat(),
+                                                lng: place.geometry?.location?.lng()
+                                            }));
+                                        }}
+                                    />
                                 </div>
 
                                 <div className="flex justify-end space-x-3 pt-4">
