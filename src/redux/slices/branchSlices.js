@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { fetchBranches, saveBranch, updateBranch, deleteBranch } from '../thunks/branchThunks';
+import { fetchBranches, saveBranch, updateBranch, deleteBranch, updateBranchMenus } from '../thunks/branchThunks';
 
 const initialState = {
     items: [],
@@ -57,7 +57,22 @@ const branchSlice = createSlice({
                 state.items = state.items.filter(item => item.id !== action.payload);
                 state.loading = false;
             })
-            .addCase(deleteBranch.rejected, rejectedHandler);
+            .addCase(deleteBranch.rejected, rejectedHandler)
+            
+            // update menu branch
+            .addCase(updateBranchMenus.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(updateBranchMenus.fulfilled, (state, action) => {
+                const { branchId, menuCabang } = action.payload;
+                const index = state.items.findIndex(branch => branch.id === branchId);
+                if (index !== -1) {
+                    state.items[index].menuCabang = menuCabang;
+                }
+                state.loading = false;
+            })
+            .addCase(updateBranchMenus.rejected, rejectedHandler);;
     },
 });
 

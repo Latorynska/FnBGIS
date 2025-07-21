@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,10 +16,15 @@ import Select from "../../components/Select/Select";
 import TextInput from "../../components/TextInput/TextInput";
 import CardLoadingOverlay from "../../components/CardLoadingOverlay/CardLoadingOverlay";
 
-import { fetchBranches, saveBranch, updateBranch } from "../../redux/thunks/branchThunks";
+import { fetchBranches, saveBranch, updateBranch, updateBranchMenus } from "../../redux/thunks/branchThunks";
 import toast from "react-hot-toast";
+import { fetchDaerahs } from "../../redux/thunks/daerahThunks";
+import { fetchBrands, fetchMenus } from "../../redux/thunks/brandThunks";
+import MenuCard from "../../components/MenuCard/MenuCard";
 
-const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', };
+const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [] };
+
+
 
 const ManageBranchData = () => {
     const dispatch = useDispatch();
@@ -40,50 +45,134 @@ const ManageBranchData = () => {
         };
     }
     const mapRef = useRef(null);
+    const markerRef = useRef(null);
     const leafletMap = useRef(null);
     const editLayerRef = useRef(null);
     const drawControlRef = useRef(null);
     const drawnLayerRef = useRef(null);
     const drawnItemsRef = useRef(new L.FeatureGroup());
-
+    const areaLayerGroupRef = useRef(null);
 
     const [mapMode, setMapMode] = useState(null); // 'view' | 'edit'
+    const [showModalMenu, setShowModalMenu] = useState(false);
     const [currentBranchesData, setCurrentBranchesData] = useState([]);
     const [branchForm, setBranchForm] = useState(defaultBranchForm);
     const [activeForm, setActiveForm] = useState('details');
     const [selectedPlace, setSelectedPlace] = useState(null);
     const [selectedArea, setSelectedArea] = useState(null);
+    const [lokasiCabang, setLokasiCabang] = useState(null);
+    const [showAreaLayer, setShowAreaLayer] = useState(true);
+    const [enableDaerahPopup, setEnableDaerahPopup] = useState(true);
+    const [brand, setBrand] = useState({});
+    const [currentMenus, setCurrentMenus] = useState([]);
 
+    const [paginatedBranchMenus, setPaginatedBranchMenus] = useState([]);
+    const [currentFilteredMenus, setCurrentFilteredMenus] = useState([]);
+
+
+    const { items: daerahs, loading: loadingDaerahs, errorDaerahs } = useSelector((state) => state.daerah);
+    const { items: Brands, loading: loadingBrand, errorBrand } = useSelector((state) => state.brand);
     const { items: branches, loading: loadingBranch, error } = useSelector(state => state.branch);
+    const { items: menus, loading: loadingMenu, errorMenu } = useSelector(state => state.menu);
+
+    const filteredMenus = useMemo(() => {
+        return (branchForm?.menuCabang || [])
+            .map(ref => typeof ref === 'string' ? ref : ref?.id)
+            .filter(Boolean)
+            .map(menuId => menus.find(m => m.id === menuId))
+            .filter(Boolean);
+    }, [branchForm?.menuCabang, menus]);
 
     useEffect(() => {
-        dispatch(fetchBranches())
-            .unwrap()
-            .catch(err => toast.error('Gagal fetch cabang: ' + err));
+        dispatch(fetchBranches()).unwrap().catch(err => toast.error('Gagal fetch cabang: ' + err));
+        dispatch(fetchDaerahs()).unwrap().catch(err => toast.error('Gagal fetch daerah: ' + err));
+        dispatch(fetchBrands()).unwrap().then((brands) => {
+            if (brands.length > 0) {
+                setBrand(brands[0]); // ambil item pertama
+                dispatch(fetchMenus(brands[0].id));
+            }
+        })
+            .catch((err) => toast.error('Gagal fetch brand: ' + err));
     }, [dispatch]);
+
+    // render daerah data
+    useEffect(() => {
+        if (!leafletMap.current) return;
+
+        if (areaLayerGroupRef.current) {
+            leafletMap.current.removeLayer(areaLayerGroupRef.current);
+        }
+
+        if (!showAreaLayer) return;
+
+        const group = L.layerGroup();
+
+        daerahs.forEach((item) => {
+            if (Array.isArray(item.area) && item.area.length) {
+                const polygon = L.polygon(item.area, {
+                    color: '#666',
+                    weight: 1,
+                    fillColor: '#ccc',
+                    fillOpacity: 0.3,
+                    interactive: true // 🔥 aktifkan klik
+                });
+
+                if (enableDaerahPopup) {
+                    const popupContent = `
+                        <b>${item.nama}</b><br/>
+                        Penduduk: ${item.jmlPenduduk?.toLocaleString?.() || '-'}<br/>
+                        UMR: Rp ${item.umr?.toLocaleString?.() || '-'}<br/>
+                        Pendapatan: Rp ${item.pendapatan?.toLocaleString?.() || '-'}
+                    `;
+                    polygon.bindPopup(popupContent);
+                }
+                group.addLayer(polygon);
+            }
+        });
+
+        group.addTo(leafletMap.current);
+        areaLayerGroupRef.current = group;
+    }, [daerahs, showAreaLayer, enableDaerahPopup]);
 
     const renderBranchesToMap = () => {
         if (!leafletMap.current) return;
 
+        // Hapus semua polygon & marker
         leafletMap.current.eachLayer(layer => {
-            if (layer instanceof L.Polygon) leafletMap.current.removeLayer(layer);
+            if (layer instanceof L.Polygon || layer instanceof L.Marker) {
+                leafletMap.current.removeLayer(layer);
+            }
         });
 
         branches.forEach(branch => {
-            if (!branch.area || !branch.area.length) return;
+            // --- Render Polygon ---
+            if (Array.isArray(branch.area) && branch.area.length) {
+                const polygon = L.polygon(branch.area, {
+                    color: 'blue',
+                    weight: 2,
+                    fillColor: 'lightblue',
+                    fillOpacity: 0.5,
+                    interactive: mapMode !== 'setLocation' // Disable interaksi saat ubah titik lokasi
+                }).addTo(leafletMap.current);
 
-            const polygon = L.polygon(branch.area, {
-                color: 'blue', weight: 2, fillColor: 'lightblue', fillOpacity: 0.5
-            }).addTo(leafletMap.current);
+                polygon.bindPopup(`<b>${branch.nama}</b>`);
+                polygon.on('click', () => {
+                    setSelectedArea({ name: branch.nama, coordinates: branch.area });
+                    setBranchForm({ ...branch });
+                });
+            }
 
-            polygon.bindPopup(`<b>${branch.nama}</b>`);
-            polygon.on('click', () => {
-                setSelectedArea({ name: branch.nama, coordinates: branch.area });
-                setBranchForm({ ...branch });
-            });
+            // --- Render Marker---
+            if (Array.isArray(branch.lokasi) && branch.lokasi.length === 2) {
+                const marker = L.marker(branch.lokasi).addTo(leafletMap.current);
+                marker.bindPopup(`<b>${branch.nama}</b><br/>Lokasi Cabang`);
+                marker.on('click', () => {
+                    setBranchForm({ ...branch });
+                    setSelectedArea({ name: branch.nama, coordinates: branch.area || [] });
+                });
+            }
         });
     };
-
     useEffect(() => {
         if (!leafletMap.current && mapRef.current) {
             leafletMap.current = L.map(mapRef.current).setView([-6.9, 107.6], 12);
@@ -103,6 +192,10 @@ const ManageBranchData = () => {
             }
         };
     }, [branches]);
+    useEffect(() => {
+        renderBranchesToMap();
+    }, [mapMode]);
+
 
     const handleLihatLokasi = () => {
         setMapMode('view');
@@ -110,6 +203,44 @@ const ManageBranchData = () => {
             leafletMap.current.fitBounds(branchForm.area);
         }
     };
+    const handleEditLokasi = () => {
+        if (!leafletMap.current) return;
+
+        setMapMode('setLocation');
+
+        leafletMap.current.getContainer().style.cursor = 'crosshair';
+
+        if (branchForm.area?.length > 0) {
+            leafletMap.current.fitBounds(branchForm.area);
+        } else if (branchForm.lokasi?.length === 2) {
+            leafletMap.current.setView(branchForm.lokasi, 16); // fallback ke lokasi marker
+        }
+        const onMapClick = async (e) => {
+            const { lat, lng } = e.latlng;
+
+            const updated = {
+                ...branchForm,
+                lokasi: [lat, lng],
+            };
+
+            setBranchForm(updated);
+            setLokasiCabang([lat, lng]);
+
+            try {
+                await dispatch(updateBranch({ id: updated.id, data: updated })).unwrap();
+                toast.success("Titik lokasi berhasil diperbarui");
+            } catch (err) {
+                toast.error("Gagal update lokasi: " + err);
+            }
+
+            leafletMap.current.getContainer().style.cursor = '';
+            leafletMap.current.off('click', onMapClick);
+            setMapMode(null);
+        };
+
+        leafletMap.current.on('click', onMapClick);
+    };
+
 
     const handleUbahCakupanArea = () => {
         if (!leafletMap.current) return;
@@ -201,7 +332,6 @@ const ManageBranchData = () => {
         }
     };
 
-
     const handleSimpanArea = async () => {
         if (!selectedArea || !selectedArea.coordinates?.length) return;
 
@@ -227,9 +357,13 @@ const ManageBranchData = () => {
         }
     };
 
-
     const handleBatalEdit = () => {
+        if (!leafletMap.current) return;
+
         setMapMode(null);
+        leafletMap.current.getContainer().style.cursor = '';
+
+        leafletMap.current.off('click'); // remove all map click listeners
 
         if (editLayerRef.current) {
             leafletMap.current.removeLayer(editLayerRef.current);
@@ -241,7 +375,7 @@ const ManageBranchData = () => {
             drawnLayerRef.current = null;
         }
 
-        if (drawControlRef.current && leafletMap.current) {
+        if (drawControlRef.current) {
             leafletMap.current.removeControl(drawControlRef.current);
             drawControlRef.current = null;
         }
@@ -283,7 +417,31 @@ const ManageBranchData = () => {
         setActiveForm("details");
         setSelectedPlace(null);
     };
+    const handleToggleMenu = (menuId, isChecked) => {
+        const current = branchForm.menuCabang || [];
 
+        const updated = isChecked
+            ? [...current, menuId]
+            : current.filter((idOrRef) => {
+                const id = typeof idOrRef === 'string' ? idOrRef : idOrRef.id;
+                return id !== menuId;
+            });
+
+        const branchId = branchForm.id;
+        if (!branchId) return;
+        setBranchForm((prev) => ({
+            ...prev,
+            menuCabang: updated,
+        }));
+        dispatch(updateBranchMenus({ branchId, menuCabang: updated }))
+            .unwrap()
+            .then(() => toast.success('Menu cabang berhasil diperbarui'))
+            .catch((err) => toast.error('Gagal update menu cabang: ' + err));
+    };
+
+    useEffect(() => {
+        console.log('branchForm menu', branchForm.menuCabang);
+    }, [branchForm]);
 
     return (
         <>
@@ -294,8 +452,26 @@ const ManageBranchData = () => {
                     <div className="card p-4 h-full">
 
                         <CardLoadingOverlay isVisible={loadingBranch} />
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
                             <h3 className="font-medium">Branch Locations</h3>
+                            <div className="flex flex-wrap gap-3 text-sm">
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={showAreaLayer}
+                                        onChange={(e) => setShowAreaLayer(e.target.checked)}
+                                    />
+                                    Tampilkan Wilayah Daerah
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={enableDaerahPopup}
+                                        onChange={(e) => setEnableDaerahPopup(e.target.checked)}
+                                    />
+                                    Aktifkan Popup Daerah
+                                </label>
+                            </div>
                         </div>
                         <div className="h-96 relative">
                             <div
@@ -310,6 +486,11 @@ const ManageBranchData = () => {
                             <div className="flex justify-end gap-2 mt-2">
                                 <Button variant='neutral' onClick={handleBatalEdit}>Batal</Button>
                                 <Button variant='primary' onClick={handleSimpanArea}>Simpan</Button>
+                            </div>
+                        )}
+                        {mapMode === 'setLocation' && (
+                            <div className="flex justify-end gap-2 mt-2">
+                                <Button variant='neutral' onClick={handleBatalEdit}>Batal</Button>
                             </div>
                         )}
                     </div>
@@ -473,7 +654,7 @@ const ManageBranchData = () => {
                     </div>
                     {activeForm === 'details' && (
                         <div id="details-tab" className="tab-content card p-6">
-                            <CardLoadingOverlay isVisible={loadingBranch} />
+                            <CardLoadingOverlay isVisible={loadingBranch || loadingBrand} />
                             <h3 className="text-lg font-bold mb-4">Branch Information</h3>
                             <form className="space-y-4" onSubmit={handleSaveBranch}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -608,6 +789,15 @@ const ManageBranchData = () => {
                                         // disabled={!selectedArea}
                                         >
                                             Lihat Lokasi
+                                        </Button>
+                                        <Button
+                                            variant="neutral"
+                                            size="medium"
+                                            className="mb-2"
+                                            onClick={handleEditLokasi}
+                                        // disabled={!selectedArea}
+                                        >
+                                            Ubah Titik Lokasi
                                         </Button>
 
                                         <Button
@@ -744,169 +934,208 @@ const ManageBranchData = () => {
                         <div id="menu-tab" className="tab-content card p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold">Menu Items</h3>
-                                <button className="text-xs bg-emerald-500 hover:bg-emerald-600 px-3 py-1 rounded-lg flex items-center">
-                                    <i className="fas fa-plus mr-1"></i> Add Item
-                                </button>
+                                <Button
+                                    variant="primary"
+                                    size="small"
+                                    icon="fas fa-plus"
+                                    onClick={() => setShowModalMenu(true)}
+                                    disabled={!branchForm?.nama || branchForm.nama.trim() === ''}
+                                >
+                                    Add New Menu
+                                </Button>
                             </div>
 
                             <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-700">
-                                    <thead>
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Item</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Category</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Price</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-800">
-                                        <tr className="table-row">
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                                                        <i className="fas fa-hamburger text-yellow-400"></i>
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <div className="font-medium">Signature Burger</div>
-                                                        <div className="text-xs text-gray-400">Beef patty with special sauce</div>
-                                                    </div>
+                                {
+                                    !Array.isArray(branchForm?.menuCabang) || branchForm.menuCabang.length === 0 ? (
+                                        <div className="text-sm text-gray-400 italic text-center py-2">
+                                            Branch belum memiliki menu atau belum pilih cabang
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <table className="min-w-full divide-y divide-gray-700 text-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nama Menu</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Foto</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Harga</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Jenis</th>
+                                                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Aksi</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-800 text-sm">
+                                                    {
+                                                        currentFilteredMenus.map((menu) => (
+                                                            <tr key={menu.id} className="hover:bg-gray-800">
+                                                                <td className="px-4 py-1">
+                                                                    <div className="font-medium">{menu.nama}</div>
+                                                                    <div className="text-xs text-gray-400">{menu.status}</div>
+                                                                </td>
+                                                                <td className="px-4 py-1">
+                                                                    {
+                                                                        menu.gambarUrl ? (
+                                                                            <img
+                                                                                src={menu.gambarUrl}
+                                                                                alt={menu.nama}
+                                                                                className="max-w-[40px] max-h-[40px] object-contain rounded"
+                                                                            />
+                                                                        ) : (
+                                                                            <i className="fas fa-image text-gray-400 text-xl"></i>
+                                                                        )
+                                                                    }
+                                                                </td>
+                                                                <td className="px-4 py-1">Rp. {menu.harga}</td>
+                                                                <td className="px-4 py-1">{menu.kategori}</td>
+                                                                <td className="px-4 py-1 text-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked
+                                                                        onChange={(e) => handleToggleMenu(menu.id, e.target.checked)}
+                                                                    />
+                                                                </td>
+                                                            </tr>
+                                                        ))
+                                                    }
+                                                </tbody>
+                                            </table>
+
+                                            {/* Pagination */}
+                                            <div className="mt-4 flex items-center justify-between">
+                                                <div className="text-sm text-gray-400">
+                                                    {currentFilteredMenus.length > 0 ? (
+                                                        <>
+                                                            Showing {currentFilteredMenus[0].number} to {currentFilteredMenus[currentFilteredMenus.length - 1].number} of {filteredMenus.length} menus
+                                                        </>
+                                                    ) : (
+                                                        <>Showing 0 to 0 of {filteredMenus.length} menus</>
+                                                    )}
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">Main Course</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">$12.99</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'active'} text={'Available'} />
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                                    <i className="fas fa-edit"></i>
-                                                </button>
-                                                <button className="text-red-400 hover:text-red-300">
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr className="table-row">
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                                                        <i className="fas fa-pizza-slice text-red-400"></i>
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <div className="font-medium">Margherita Pizza</div>
-                                                        <div className="text-xs text-gray-400">Classic tomato and mozzarella</div>
-                                                    </div>
+                                                <div className="flex space-x-2">
+                                                    <Pagination
+                                                        dataList={filteredMenus}
+                                                        itemsPerPage={8}
+                                                        setCurrentData={setCurrentFilteredMenus}
+                                                        numberingData={true}
+                                                    />
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">Main Course</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">$14.99</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'active'} text={'Available'} />
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                                    <i className="fas fa-edit"></i>
-                                                </button>
-                                                <button className="text-red-400 hover:text-red-300">
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr className="table-row">
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                                                        <i className="fas fa-leaf text-green-400"></i>
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <div className="font-medium">Caesar Salad</div>
-                                                        <div className="text-xs text-gray-400">Romaine, croutons, parmesan</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">Salad</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">$9.99</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'active'} text={'Available'} />
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                                    <i className="fas fa-edit"></i>
-                                                </button>
-                                                <button className="text-red-400 hover:text-red-300">
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr className="table-row">
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                                                        <i className="fas fa-coffee text-blue-400"></i>
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <div className="font-medium">Iced Coffee</div>
-                                                        <div className="text-xs text-gray-400">Cold brew with milk</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">Beverage</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="text-sm">$4.50</div>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <Pill status={'critical'} text={'Out of Stock'} />
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm">
-                                                <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                                    <i className="fas fa-edit"></i>
-                                                </button>
-                                                <button className="text-red-400 hover:text-red-300">
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                            </div>
+                                        </>
+                                    )
+                                }
                             </div>
                         </div>
                     )}
+
+
                 </div>
             </div>
-            {/* {showModal && (
-                <Modal onClose={() => setShowModal(false)} title="Nama Cabang Baru">
-                    <div className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="Nama Cabang"
-                            className="w-full px-4 py-2 border rounded"
-                            value={newBranchName}
-                            onChange={(e) => setNewBranchName(e.target.value)}
-                        />
-                        <button
-                            onClick={handleSaveBranch}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-                        >
-                            Simpan Cabang
-                        </button>
+            {showModalMenu && (
+                <Modal width="xl" glass={false} onClose={() => setShowModalMenu(false)} title={"Kelola Menu Cabang " + branchForm.nama}>
+                    <div className="card p-4">
+                        <CardLoadingOverlay isVisible={loadingBranch} />
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-700">
+                                <thead>
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nama Menu</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Foto</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Harga</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Jenis</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Deskripsi</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody
+                                    className="divide-y divide-gray-800"
+                                >
+                                    {
+                                        currentMenus.length === 0 ? (
+                                            <tr className="table-row">
+                                                <td className="whitespace-nowrap" colSpan={6}>
+                                                    <div className="text-sm text-gray-400 italic text-center py-2">
+                                                        Brand tidak memiliki menu
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                            :
+                                            currentMenus.map((menu, index) => {
+                                                const selectedMenuIds = (branchForm?.menuCabang || []).map(ref => {
+                                                    if (typeof ref === 'string') return ref;
+                                                    if (ref?.id) return ref.id;
+                                                    return null;
+                                                }).filter(Boolean);
+
+                                                return (
+                                                    <tr
+                                                        className={`table-row cursor-pointer hover:bg-gray-800`}
+                                                        key={menu.id || index}
+                                                    >
+                                                        <td className="px-4 py-4 whitespace-nowrap">
+                                                            <div className="text-sm">{menu.nama}</div>
+                                                            <div className="text-xs text-gray-400">{menu.status}</div>
+                                                        </td>
+                                                        <td className="px-4 py-4 whitespace-nowrap">
+                                                            {
+                                                                menu.gambarUrl ? (
+                                                                    <img
+                                                                        height={'50px'}
+                                                                        src={menu.gambarUrl}
+                                                                        alt="Current"
+                                                                        className="w-full max-h-8 object-cover rounded"
+                                                                    />
+                                                                ) : (
+                                                                    <i className="fas fa-image text-gray-400 text-xl"></i>
+                                                                )
+                                                            }
+                                                        </td>
+                                                        <td className="px-4 py-4 whitespace-nowrap">
+                                                            Rp. {menu.harga}
+                                                        </td>
+                                                        <td className="px-4 py-4 whitespace-nowrap">
+                                                            {menu.kategori}
+                                                        </td>
+                                                        <td className="px-4 py-4 align-top">
+                                                            <div className="text-xs text-gray-300 whitespace-normal break-words max-w-sm">
+                                                                {menu.deskripsi}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                                            <div className="flex justify-around">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedMenuIds.includes(menu.id)}
+
+                                                                    onChange={(e) => handleToggleMenu(menu.id, e.target.checked)}
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between">
+                            <div className="text-sm text-gray-400">
+                                {currentMenus.length > 0 ? (
+                                    <>Showing {currentMenus[0].number} to {currentMenus[currentMenus.length - 1].number} of {menus.length} menus</>
+                                ) : (
+                                    <>Showing 0 to 0 of {menus.length} menus</>
+                                )}
+                            </div>
+                            <div className="flex space-x-2">
+                                <Pagination
+                                    dataList={menus}
+                                    itemsPerPage={10}
+                                    setCurrentData={setCurrentMenus}
+                                    numberingData={true}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </Modal>
-            )} */}
+            )}
         </>
     );
 }

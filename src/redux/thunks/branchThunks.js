@@ -111,3 +111,19 @@ export const deleteBranch = createAsyncThunk('branch/delete', async (id, thunkAP
     return thunkAPI.rejectWithValue(err.message);
   }
 });
+
+// branch menu
+export const updateBranchMenus = createAsyncThunk(
+  'branch/updateBranchMenus',
+  async ({ branchId, menuCabang }, { rejectWithValue }) => {
+    try {
+      const branchRef = doc(db, 'branches', branchId);
+
+      await updateDoc(branchRef, { menuCabang });
+
+      return { branchId, menuCabang };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
