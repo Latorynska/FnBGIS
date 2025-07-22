@@ -187,8 +187,6 @@ export const savePenjualan = createAsyncThunk(
         totalPendapatan: Number(summary.totalPendapatan) || 0,
         catatan: summary.catatan || ""
       }, { merge: true });
-
-      // Simpan detail penjualan per menu
       const detailCollectionRef = collection(penjualanRef, "DetailPenjualan");
       const promises = Object.entries(detail).map(([menuId, qty]) =>
         setDoc(doc(detailCollectionRef, menuId), {
@@ -196,15 +194,12 @@ export const savePenjualan = createAsyncThunk(
           menu: menuId
         })
       );
-
       await Promise.all(promises);
-
       return {
         branchId,
         periodeId,
         summary,
         detail,
-        isUpdate: true // masih bisa kirim ini kalau kamu ingin tahu, walau timestamp-nya tidak disimpan
       };
     } catch (err) {
       return rejectWithValue(err.message);

@@ -79,7 +79,7 @@ const branchSlice = createSlice({
                 state.error = null;
             })
             .addCase(savePenjualan.fulfilled, (state, action) => {
-                const { branchId, periodeId, summary, detail, isUpdate } = action.payload;
+                const { branchId, periodeId, summary, detail} = action.payload;
                 const branch = state.items.find(b => b.id === branchId);
                 if (branch) {
                     if (!branch.penjualan) branch.penjualan = {};
@@ -95,9 +95,7 @@ const branchSlice = createSlice({
                     };
                 }
                 state.loading = false;
-                state.successMessage = isUpdate
-                    ? "Penjualan berhasil diperbarui"
-                    : "Penjualan berhasil disimpan";
+                state.successMessage = "Penjualan berhasil disimpan"
             })
             .addCase(savePenjualan.rejected, (state, action) => {
                 state.loading = false;
