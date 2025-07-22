@@ -6,7 +6,6 @@ import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 import Button from "../../components/Button/Button";
-import Pill from "../../components/Pill/Pill";
 import Modal from "../../components/Modal/Modal";
 import Pagination from "../../components/Pagination/Pagination";
 import './ManageBranch.css';
@@ -16,15 +15,14 @@ import Select from "../../components/Select/Select";
 import TextInput from "../../components/TextInput/TextInput";
 import CardLoadingOverlay from "../../components/CardLoadingOverlay/CardLoadingOverlay";
 
-import { fetchBranches, saveBranch, updateBranch, updateBranchMenus } from "../../redux/thunks/branchThunks";
+import { fetchBranches, saveBranch, savePenjualan, updateBranch, updateBranchMenus } from "../../redux/thunks/branchThunks";
 import toast from "react-hot-toast";
 import { fetchDaerahs } from "../../redux/thunks/daerahThunks";
 import { fetchBrands, fetchMenus } from "../../redux/thunks/brandThunks";
-import MenuCard from "../../components/MenuCard/MenuCard";
 
-const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [] };
-
-
+const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [], penjualan: [] };
+const months = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
+const defaultPenjualan = { periode: '', catatan: '', totalTransaksi: '', pendapatan: '' };
 
 const ManageBranchData = () => {
     const dispatch = useDispatch();
@@ -45,7 +43,7 @@ const ManageBranchData = () => {
         };
     }
     const mapRef = useRef(null);
-    const markerRef = useRef(null);
+    // const markerRef = useRef(null);
     const leafletMap = useRef(null);
     const editLayerRef = useRef(null);
     const drawControlRef = useRef(null);
@@ -53,21 +51,21 @@ const ManageBranchData = () => {
     const drawnItemsRef = useRef(new L.FeatureGroup());
     const areaLayerGroupRef = useRef(null);
 
+    const [branchForm, setBranchForm] = useState(defaultBranchForm);
+    const [penjualan, setPenjualan] = useState(defaultPenjualan);
+    const [detailPenjualan, setDetailPenjualan] = useState({});
+
     const [mapMode, setMapMode] = useState(null); // 'view' | 'edit'
     const [showModalMenu, setShowModalMenu] = useState(false);
+    const [showModalPenjualan, setShowModalPenjualan] = useState(false);
     const [currentBranchesData, setCurrentBranchesData] = useState([]);
-    const [branchForm, setBranchForm] = useState(defaultBranchForm);
     const [activeForm, setActiveForm] = useState('details');
-    const [selectedPlace, setSelectedPlace] = useState(null);
     const [selectedArea, setSelectedArea] = useState(null);
-    const [lokasiCabang, setLokasiCabang] = useState(null);
     const [showAreaLayer, setShowAreaLayer] = useState(true);
     const [enableDaerahPopup, setEnableDaerahPopup] = useState(true);
-    const [brand, setBrand] = useState({});
     const [currentMenus, setCurrentMenus] = useState([]);
-
-    const [paginatedBranchMenus, setPaginatedBranchMenus] = useState([]);
     const [currentFilteredMenus, setCurrentFilteredMenus] = useState([]);
+    const [selectedPeriode, setSelectedPeriode] = useState({ bulan: '', tahun: '2021' });
 
 
     const { items: daerahs, loading: loadingDaerahs, errorDaerahs } = useSelector((state) => state.daerah);
@@ -82,57 +80,11 @@ const ManageBranchData = () => {
             .map(menuId => menus.find(m => m.id === menuId))
             .filter(Boolean);
     }, [branchForm?.menuCabang, menus]);
+    const periodeId = useMemo(() => {
+        const index = months.indexOf(selectedPeriode.bulan);
+        return `${selectedPeriode.tahun}-${String(index + 1).padStart(2, '0')}`;
+    }, [selectedPeriode]);
 
-    useEffect(() => {
-        dispatch(fetchBranches()).unwrap().catch(err => toast.error('Gagal fetch cabang: ' + err));
-        dispatch(fetchDaerahs()).unwrap().catch(err => toast.error('Gagal fetch daerah: ' + err));
-        dispatch(fetchBrands()).unwrap().then((brands) => {
-            if (brands.length > 0) {
-                setBrand(brands[0]); // ambil item pertama
-                dispatch(fetchMenus(brands[0].id));
-            }
-        })
-            .catch((err) => toast.error('Gagal fetch brand: ' + err));
-    }, [dispatch]);
-
-    // render daerah data
-    useEffect(() => {
-        if (!leafletMap.current) return;
-
-        if (areaLayerGroupRef.current) {
-            leafletMap.current.removeLayer(areaLayerGroupRef.current);
-        }
-
-        if (!showAreaLayer) return;
-
-        const group = L.layerGroup();
-
-        daerahs.forEach((item) => {
-            if (Array.isArray(item.area) && item.area.length) {
-                const polygon = L.polygon(item.area, {
-                    color: '#666',
-                    weight: 1,
-                    fillColor: '#ccc',
-                    fillOpacity: 0.3,
-                    interactive: true // 🔥 aktifkan klik
-                });
-
-                if (enableDaerahPopup) {
-                    const popupContent = `
-                        <b>${item.nama}</b><br/>
-                        Penduduk: ${item.jmlPenduduk?.toLocaleString?.() || '-'}<br/>
-                        UMR: Rp ${item.umr?.toLocaleString?.() || '-'}<br/>
-                        Pendapatan: Rp ${item.pendapatan?.toLocaleString?.() || '-'}
-                    `;
-                    polygon.bindPopup(popupContent);
-                }
-                group.addLayer(polygon);
-            }
-        });
-
-        group.addTo(leafletMap.current);
-        areaLayerGroupRef.current = group;
-    }, [daerahs, showAreaLayer, enableDaerahPopup]);
 
     const renderBranchesToMap = () => {
         if (!leafletMap.current) return;
@@ -174,6 +126,54 @@ const ManageBranchData = () => {
         });
     };
     useEffect(() => {
+        dispatch(fetchBranches()).unwrap().catch(err => toast.error('Gagal fetch cabang: ' + err));
+        dispatch(fetchDaerahs()).unwrap().catch(err => toast.error('Gagal fetch daerah: ' + err));
+        dispatch(fetchBrands()).unwrap().then((brands) => {
+            if (brands.length > 0) {
+                dispatch(fetchMenus(brands[0].id));
+            }
+        })
+            .catch((err) => toast.error('Gagal fetch brand: ' + err));
+    }, [dispatch]);
+    // render daerah data
+    useEffect(() => {
+        if (!leafletMap.current) return;
+
+        if (areaLayerGroupRef.current) {
+            leafletMap.current.removeLayer(areaLayerGroupRef.current);
+        }
+
+        if (!showAreaLayer) return;
+
+        const group = L.layerGroup();
+
+        daerahs.forEach((item) => {
+            if (Array.isArray(item.area) && item.area.length) {
+                const polygon = L.polygon(item.area, {
+                    color: '#666',
+                    weight: 1,
+                    fillColor: '#ccc',
+                    fillOpacity: 0.3,
+                    interactive: true // 🔥 aktifkan klik
+                });
+
+                if (enableDaerahPopup) {
+                    const popupContent = `
+                        <b>${item.nama}</b><br/>
+                        Penduduk: ${item.jmlPenduduk?.toLocaleString?.() || '-'}<br/>
+                        UMR: Rp ${item.umr?.toLocaleString?.() || '-'}<br/>
+                        Pendapatan: Rp ${item.pendapatan?.toLocaleString?.() || '-'}
+                    `;
+                    polygon.bindPopup(popupContent);
+                }
+                group.addLayer(polygon);
+            }
+        });
+
+        group.addTo(leafletMap.current);
+        areaLayerGroupRef.current = group;
+    }, [daerahs, showAreaLayer, enableDaerahPopup]);
+    useEffect(() => {
         if (!leafletMap.current && mapRef.current) {
             leafletMap.current = L.map(mapRef.current).setView([-6.9, 107.6], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -195,7 +195,33 @@ const ManageBranchData = () => {
     useEffect(() => {
         renderBranchesToMap();
     }, [mapMode]);
+    useEffect(() => {
+        if (showModalPenjualan && branchForm?.penjualan) {
+            const bulanIndex = [
+                "JAN", "FEB", "MAR", "APR", "MEI", "JUN",
+                "JUL", "AGU", "SEP", "OKT", "NOV", "DES"
+            ].indexOf(selectedPeriode.bulan);
 
+            if (bulanIndex !== -1) {
+                const periodeId = `${selectedPeriode.tahun}-${String(bulanIndex + 1).padStart(2, '0')}`;
+                const penjualanData = branchForm.penjualan[periodeId];
+
+                if (penjualanData) {
+                    setPenjualan({
+                        totalTransaksi: penjualanData.totalTransaksi || '',
+                        pendapatan: penjualanData.totalPendapatan || '',
+                        catatan: penjualanData.catatan || ''
+                    });
+
+                    setDetailPenjualan(penjualanData.detail || {});
+                } else {
+                    // Kosongkan jika tidak ada data
+                    setPenjualan(defaultPenjualan);
+                    setDetailPenjualan({});
+                }
+            }
+        }
+    }, [showModalPenjualan, selectedPeriode, branchForm]);
 
     const handleLihatLokasi = () => {
         setMapMode('view');
@@ -213,7 +239,7 @@ const ManageBranchData = () => {
         if (branchForm.area?.length > 0) {
             leafletMap.current.fitBounds(branchForm.area);
         } else if (branchForm.lokasi?.length === 2) {
-            leafletMap.current.setView(branchForm.lokasi, 16); // fallback ke lokasi marker
+            leafletMap.current.setView(branchForm.lokasi, 16);
         }
         const onMapClick = async (e) => {
             const { lat, lng } = e.latlng;
@@ -222,10 +248,7 @@ const ManageBranchData = () => {
                 ...branchForm,
                 lokasi: [lat, lng],
             };
-
             setBranchForm(updated);
-            setLokasiCabang([lat, lng]);
-
             try {
                 await dispatch(updateBranch({ id: updated.id, data: updated })).unwrap();
                 toast.success("Titik lokasi berhasil diperbarui");
@@ -240,7 +263,6 @@ const ManageBranchData = () => {
 
         leafletMap.current.on('click', onMapClick);
     };
-
 
     const handleUbahCakupanArea = () => {
         if (!leafletMap.current) return;
@@ -356,6 +378,46 @@ const ManageBranchData = () => {
             toast.error("Gagal simpan area: " + err);
         }
     };
+    const handleSimpanPenjualan = async () => {
+        try {
+            const periodeId = `${selectedPeriode.tahun}-${String(
+                ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"]
+                    .indexOf(selectedPeriode.bulan) + 1
+            ).padStart(2, "0")}`;
+
+            await dispatch(savePenjualan({
+                branchId: branchForm.id,
+                periode: selectedPeriode,
+                summary: {
+                    totalTransaksi: penjualan.totalTransaksi,
+                    totalPendapatan: penjualan.pendapatan,
+                    catatan: penjualan.catatan || ''
+                },
+                detail: detailPenjualan,
+            }))
+                .unwrap()
+                .then(() => {
+                    setBranchForm(prev => ({
+                        ...prev,
+                        penjualan: {
+                            ...(prev.penjualan || {}),
+                            [periodeId]: {
+                                totalTransaksi: penjualan.totalTransaksi,
+                                totalPendapatan: penjualan.pendapatan,
+                                catatan: penjualan.catatan || '',
+                                detail: { ...detailPenjualan }
+                            }
+                        }
+                    }));
+
+                    toast.success("Penjualan berhasil disimpan");
+                    setShowModalPenjualan(false);
+                })
+                .catch((err) => toast.error("Gagal simpan penjualan: " + err));
+        } catch (err) {
+            toast.error("Gagal simpan penjualan: " + err);
+        }
+    };
 
     const handleBatalEdit = () => {
         if (!leafletMap.current) return;
@@ -397,7 +459,6 @@ const ManageBranchData = () => {
             .then(() => {
                 toast.success(`Cabang berhasil ${branchForm.id ? 'diperbarui' : 'ditambahkan'}`);
                 setBranchForm(defaultBranchForm);
-                setSelectedPlace(null);
                 dispatch(fetchBranches());
             })
             .catch((err) => toast.error("Gagal simpan: " + err));
@@ -415,7 +476,6 @@ const ManageBranchData = () => {
 
         setBranchForm(selected);
         setActiveForm("details");
-        setSelectedPlace(null);
     };
     const handleToggleMenu = (menuId, isChecked) => {
         const current = branchForm.menuCabang || [];
@@ -439,10 +499,6 @@ const ManageBranchData = () => {
             .catch((err) => toast.error('Gagal update menu cabang: ' + err));
     };
 
-    useEffect(() => {
-        console.log('branchForm menu', branchForm.menuCabang);
-    }, [branchForm]);
-
     return (
         <>
             {/* map */}
@@ -450,8 +506,7 @@ const ManageBranchData = () => {
                 {/* map ui */}
                 <div className="lg:col-span-5">
                     <div className="card p-4 h-full">
-
-                        <CardLoadingOverlay isVisible={loadingBranch} />
+                        <CardLoadingOverlay isVisible={loadingBranch || loadingDaerahs} />
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
                             <h3 className="font-medium">Branch Locations</h3>
                             <div className="flex flex-wrap gap-3 text-sm">
@@ -526,7 +581,6 @@ const ManageBranchData = () => {
                                 onClick={() => {
                                     setBranchForm(defaultBranchForm);
                                     setActiveForm("details");
-                                    setSelectedPlace(null);
                                 }}
                             >
                                 Tambah Cabang Baru
@@ -546,7 +600,7 @@ const ManageBranchData = () => {
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Penjualan</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rating Lokasi</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Afiliasi</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Aksi</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Show</th>
                                     </tr>
                                 </thead>
                                 <tbody
@@ -600,7 +654,7 @@ const ManageBranchData = () => {
                                                         </td>
                                                         <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
                                                             <div className="flex justify-around">
-                                                                <div className="space-y-1">
+                                                                {/* <div className="space-y-1">
                                                                     <button className="text-blue-400 hover:text-blue-300 mr-3">
                                                                         <i className="fas fa-edit"></i>
                                                                     </button>
@@ -610,7 +664,10 @@ const ManageBranchData = () => {
                                                                     <button className="text-red-400 hover:text-red-300">
                                                                         <i className="fas fa-trash"></i>
                                                                     </button>
-                                                                </div>
+                                                                </div> */}
+                                                                <input
+                                                                    type="checkbox"
+                                                                />
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -652,6 +709,7 @@ const ManageBranchData = () => {
                             <i className="fas fa-utensils mr-2"></i> Menu Items
                         </button>
                     </div>
+                    {/* tab detail form cabang */}
                     {activeForm === 'details' && (
                         <div id="details-tab" className="tab-content card p-6">
                             <CardLoadingOverlay isVisible={loadingBranch || loadingBrand} />
@@ -769,7 +827,6 @@ const ManageBranchData = () => {
                                     <label className="block text-sm text-gray-400 mb-1">Pilih Lokasi Cabang</label>
                                     <GooglePlaceAutocomplete
                                         onPlaceSelected={(place) => {
-                                            setSelectedPlace(place);
                                             setBranchForm(prev => ({
                                                 ...prev,
                                                 placeId: place.place_id,
@@ -824,7 +881,6 @@ const ManageBranchData = () => {
                                             size="medium"
                                             onClick={() => {
                                                 setBranchForm(defaultBranchForm);
-                                                setSelectedPlace(null);
                                             }}
                                         >
                                             Cancel
@@ -844,92 +900,60 @@ const ManageBranchData = () => {
                             </form>
                         </div>
                     )}
+                    {/* tab sales cabang */}
                     {activeForm === 'sales' && (
-                        <div id="sales-tab" className="tab-content card p-6">
-                            <h3 className="text-lg font-bold mb-4">Sales Data for Downtown Cafe</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <div className="card p-4">
-                                    <h4 className="font-medium mb-3">Sales Summary</h4>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">Today's Revenue</span>
-                                            <span className="font-medium">$3,245</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">Weekly Revenue</span>
-                                            <span className="font-medium">$18,760</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">Monthly Revenue</span>
-                                            <span className="font-medium">$72,450</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">Avg. Daily Customers</span>
-                                            <span className="font-medium">342</span>
-                                        </div>
+                        <div id="sales-tab" className="tab-content card p-6 flex flex-col flex-1">
+                            <CardLoadingOverlay isVisible={loadingBranch || loadingBrand} />
+                            {
+                                branchForm.nama.trim() === '' ? (
+                                    <div className="text-sm text-gray-400 italic text-center py-2">
+                                        Branch belum dipilih
                                     </div>
-                                </div>
-                                <div className="card p-4">
-                                    <h4 className="font-medium mb-3">Top Selling Items</h4>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">1. Signature Burger</span>
-                                            <span className="font-medium">428 sold</span>
+                                )
+                                    :
+                                    <>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="font-medium">Penjualan Cabang {branchForm.nama}</h3>
+                                            <Select
+                                                label="Tahun"
+                                                variant="plain"
+                                                options={["2021", "2022", "2023", "2024"]}
+                                                placeholder="Tahun Penjualan"
+                                                value={selectedPeriode.tahun}
+                                                onChange={(e) => setSelectedPeriode({ ...selectedPeriode, tahun: e.target.value })}
+                                            />
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">2. Margherita Pizza</span>
-                                            <span className="font-medium">387 sold</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">3. Caesar Salad</span>
-                                            <span className="font-medium">298 sold</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-400">4. Iced Coffee</span>
-                                            <span className="font-medium">245 sold</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="card p-4 mb-6">
-                                <h4 className="font-medium mb-3">Sales Trend (Last 30 Days)</h4>
-                                <div className="sales-chart-container">
-                                    <canvas id="salesChart"></canvas>
-                                </div>
-                            </div>
-                            <h4 className="font-medium mb-3">Add Sales Record</h4>
-                            <form className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-1">Date</label>
-                                        <input type="date" className="input-field w-full px-4 py-2 rounded-lg" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-1">Total Revenue</label>
-                                        <input type="number" step="0.01" placeholder="0.00" className="input-field w-full px-4 py-2 rounded-lg" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-gray-400 mb-1">Customer Count</label>
-                                        <input type="number" placeholder="0" className="input-field w-full px-4 py-2 rounded-lg" />
-                                    </div>
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Notes</label>
-                                    <textarea className="input-field w-full px-4 py-2 rounded-lg" rows="2" placeholder="Any special events or notes about this day"></textarea>
-                                </div>
+                                        <div className="mb-4">
+                                            <label className="block text-sm text-gray-400 mb-1">Bulan</label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {months.map((month, index) => {
+                                                    const bulanIndex = String(index + 1).padStart(2, "0");
+                                                    const periodeKey = `${selectedPeriode.tahun}-${bulanIndex}`;
+                                                    const hasData = branchForm.penjualan && branchForm.penjualan[periodeKey];
 
-                                <div className="flex justify-end space-x-3 pt-4">
-                                    <button type="button" className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600">
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 flex items-center">
-                                        <i className="fas fa-plus mr-2"></i> Add Record
-                                    </button>
-                                </div>
-                            </form>
+                                                    return (
+                                                        <Button
+                                                            key={index}
+                                                            variant={hasData ? "primary" : "ghost"}
+                                                            size="medium"
+                                                            onClick={() => {
+                                                                setSelectedPeriode({ ...selectedPeriode, bulan: month });
+                                                                setShowModalPenjualan(true);
+                                                            }}
+                                                        >
+                                                            {month}
+                                                        </Button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </>
+
+                            }
                         </div>
                     )}
+                    {/* tab menu cabang */}
                     {activeForm === 'menu' && (
                         <div id="menu-tab" className="tab-content card p-6">
                             <div className="flex items-center justify-between mb-4">
@@ -1127,12 +1151,125 @@ const ManageBranchData = () => {
                             <div className="flex space-x-2">
                                 <Pagination
                                     dataList={menus}
-                                    itemsPerPage={10}
+                                    itemsPerPage={5}
                                     setCurrentData={setCurrentMenus}
                                     numberingData={true}
                                 />
                             </div>
                         </div>
+                    </div>
+                </Modal>
+            )}
+
+            {showModalPenjualan && (
+                <Modal width="xl" glass={false} onClose={() => setShowModalPenjualan(false)} title={"Penjualan Cabang " + branchForm.nama + " Periode " + selectedPeriode.bulan + " " + selectedPeriode.tahun}>
+                    <CardLoadingOverlay isVisible={loadingBranch} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <TextInput
+                                name={'totalTransaksi'}
+                                value={penjualan.totalTransaksi}
+                                onChange={(e) => setPenjualan({ ...penjualan, totalTransaksi: e.target.value })}
+                                label={'Total transaksi'}
+                                placeholder="xxxxx"
+                            />
+                        </div>
+                        <div>
+                            <TextInput
+                                name={'totalPendapatan'}
+                                value={penjualan.pendapatan}
+                                onChange={(e) => setPenjualan({ ...penjualan, pendapatan: e.target.value })}
+                                label={'Total Pendapatan'}
+                                placeholder="Rp. xxx"
+                            />
+                        </div>
+                    </div>
+                    <div className="p-4">
+                        <table className="min-w-full divide-y divide-gray-700 text-sm">
+                            <thead>
+                                <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nama Menu</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Foto</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Harga</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Jenis</th>
+                                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Terjual</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-800 text-sm">
+                                {
+                                    currentFilteredMenus.map((menu) => (
+                                        <tr key={menu.id} className="hover:bg-gray-800">
+                                            <td className="px-4 py-1">
+                                                <div className="font-medium">{menu.nama}</div>
+                                                <div className="text-xs text-gray-400">{menu.status}</div>
+                                            </td>
+                                            <td className="px-4 py-1">
+                                                {
+                                                    menu.gambarUrl ? (
+                                                        <img
+                                                            src={menu.gambarUrl}
+                                                            alt={menu.nama}
+                                                            className="max-w-[40px] max-h-[40px] object-contain rounded"
+                                                        />
+                                                    ) : (
+                                                        <i className="fas fa-image text-gray-400 text-xl"></i>
+                                                    )
+                                                }
+                                            </td>
+                                            <td className="px-4 py-1">Rp. {menu.harga}</td>
+                                            <td className="px-4 py-1">{menu.kategori}</td>
+                                            <td className="px-4 py-1 text-center">
+                                                <TextInput
+                                                    type="number"
+                                                    value={detailPenjualan[menu.id] || ''}
+                                                    onChange={(e) =>
+                                                        setDetailPenjualan(prev => ({
+                                                            ...prev,
+                                                            [menu.id]: Number(e.target.value)
+                                                        }))
+                                                    }
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))
+                                }
+                            </tbody>
+                        </table>
+                        {/* Pagination */}
+                        <div className="mt-4 flex items-center justify-between">
+                            <div className="text-sm text-gray-400">
+                                {currentFilteredMenus.length > 0 ? (
+                                    <>
+                                        Showing {currentFilteredMenus[0].number} to {currentFilteredMenus[currentFilteredMenus.length - 1].number} of {filteredMenus.length} menus
+                                    </>
+                                ) : (
+                                    <>Showing 0 to 0 of {filteredMenus.length} menus</>
+                                )}
+                            </div>
+                            <div className="flex space-x-2">
+                                <Pagination
+                                    dataList={filteredMenus}
+                                    itemsPerPage={8}
+                                    setCurrentData={setCurrentFilteredMenus}
+                                    numberingData={true}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end space-x-3 pt-4">
+                        <Button variant="neutral" size="medium" onClick={() => {
+                            setShowModalPenjualan(false); setPenjualan(defaultPenjualan);
+                            setDetailPenjualan({});
+                        }}>
+                            Batal
+                        </Button>
+                        <Button variant="primary" size="medium" type="submit"
+                            onClick={() => {
+                                handleSimpanPenjualan();
+                                setShowModalPenjualan(false);
+                            }}>
+                            Simpan
+                        </Button>
                     </div>
                 </Modal>
             )}

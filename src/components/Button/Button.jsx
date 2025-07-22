@@ -19,7 +19,8 @@ const Button = ({
     warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
     success: 'bg-green-500 hover:bg-green-600 text-white',
     neutral: 'bg-gray-600 hover:bg-gray-800 text-white',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300',
+    ghost: 'bg-gray-800 text-white border-gray-600 hover:bg-gray-700',
+    
     none: '',
   };
 

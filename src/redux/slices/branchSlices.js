@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { fetchBranches, saveBranch, updateBranch, deleteBranch, updateBranchMenus } from '../thunks/branchThunks';
+import { fetchBranches, saveBranch, updateBranch, deleteBranch, updateBranchMenus, savePenjualan } from '../thunks/branchThunks';
 
 const initialState = {
     items: [],
@@ -58,7 +58,7 @@ const branchSlice = createSlice({
                 state.loading = false;
             })
             .addCase(deleteBranch.rejected, rejectedHandler)
-            
+
             // update menu branch
             .addCase(updateBranchMenus.pending, (state) => {
                 state.loading = true;
@@ -72,7 +72,38 @@ const branchSlice = createSlice({
                 }
                 state.loading = false;
             })
-            .addCase(updateBranchMenus.rejected, rejectedHandler);;
+            .addCase(updateBranchMenus.rejected, rejectedHandler)
+            // penjualan
+            .addCase(savePenjualan.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(savePenjualan.fulfilled, (state, action) => {
+                const { branchId, periodeId, summary, detail, isUpdate } = action.payload;
+                const branch = state.items.find(b => b.id === branchId);
+                if (branch) {
+                    if (!branch.penjualan) branch.penjualan = {};
+                    branch.penjualan[periodeId] = {
+                        ...(branch.penjualan[periodeId] || {}),
+                        totalTransaksi: Number(summary.totalTransaksi) || 0,
+                        totalPendapatan: Number(summary.totalPendapatan) || 0,
+                        catatan: summary.catatan || '',
+                        detail: {
+                            ...(branch.penjualan[periodeId]?.detail || {}),
+                            ...(detail || {})
+                        }
+                    };
+                }
+                state.loading = false;
+                state.successMessage = isUpdate
+                    ? "Penjualan berhasil diperbarui"
+                    : "Penjualan berhasil disimpan";
+            })
+            .addCase(savePenjualan.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            });
+
     },
 });
 
