@@ -19,8 +19,10 @@ import { fetchBranches, saveBranch, savePenjualan, updateBranch, updateBranchMen
 import toast from "react-hot-toast";
 import { fetchDaerahs } from "../../redux/thunks/daerahThunks";
 import { fetchBrands, fetchMenus } from "../../redux/thunks/brandThunks";
+import { fetchPlaceRatingById } from "../../helper/gMapsReviewHelper";
+import { updateBranchRating } from "../../redux/slices/branchSlices";
 
-const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [], penjualan: [] };
+const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], lokasi: null, manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [], penjualan: [], rating: '', totalReview: '' };
 const months = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
 const defaultPenjualan = { periode: '', catatan: '', totalTransaksi: '', pendapatan: '' };
 
@@ -67,7 +69,6 @@ const ManageBranchData = () => {
     const [currentFilteredMenus, setCurrentFilteredMenus] = useState([]);
     const [selectedPeriode, setSelectedPeriode] = useState({ bulan: '', tahun: '2021' });
 
-
     const { items: daerahs, loading: loadingDaerahs, errorDaerahs } = useSelector((state) => state.daerah);
     const { items: Brands, loading: loadingBrand, errorBrand } = useSelector((state) => state.brand);
     const { items: branches, loading: loadingBranch, error } = useSelector(state => state.branch);
@@ -80,11 +81,6 @@ const ManageBranchData = () => {
             .map(menuId => menus.find(m => m.id === menuId))
             .filter(Boolean);
     }, [branchForm?.menuCabang, menus]);
-    const periodeId = useMemo(() => {
-        const index = months.indexOf(selectedPeriode.bulan);
-        return `${selectedPeriode.tahun}-${String(index + 1).padStart(2, '0')}`;
-    }, [selectedPeriode]);
-
 
     const renderBranchesToMap = () => {
         if (!leafletMap.current) return;
@@ -125,54 +121,86 @@ const ManageBranchData = () => {
             }
         });
     };
-    useEffect(() => {
-        dispatch(fetchBranches()).unwrap().catch(err => toast.error('Gagal fetch cabang: ' + err));
-        dispatch(fetchDaerahs()).unwrap().catch(err => toast.error('Gagal fetch daerah: ' + err));
-        dispatch(fetchBrands()).unwrap().then((brands) => {
-            if (brands.length > 0) {
-                dispatch(fetchMenus(brands[0].id));
-            }
-        })
-            .catch((err) => toast.error('Gagal fetch brand: ' + err));
-    }, [dispatch]);
-    // render daerah data
-    useEffect(() => {
-        if (!leafletMap.current) return;
+    const renderDaerahLayer = (daerahList = daerahs) => {
+        if (!leafletMap.current || !Array.isArray(daerahList)) return;
 
+        // Bersihkan layer lama
         if (areaLayerGroupRef.current) {
             leafletMap.current.removeLayer(areaLayerGroupRef.current);
         }
 
+        // Tidak render jika toggle dimatikan
         if (!showAreaLayer) return;
 
         const group = L.layerGroup();
 
-        daerahs.forEach((item) => {
+        daerahList.forEach((item) => {
             if (Array.isArray(item.area) && item.area.length) {
                 const polygon = L.polygon(item.area, {
                     color: '#666',
                     weight: 1,
                     fillColor: '#ccc',
                     fillOpacity: 0.3,
-                    interactive: true // 🔥 aktifkan klik
+                    interactive: true
                 });
 
                 if (enableDaerahPopup) {
                     const popupContent = `
-                        <b>${item.nama}</b><br/>
-                        Penduduk: ${item.jmlPenduduk?.toLocaleString?.() || '-'}<br/>
-                        UMR: Rp ${item.umr?.toLocaleString?.() || '-'}<br/>
-                        Pendapatan: Rp ${item.pendapatan?.toLocaleString?.() || '-'}
-                    `;
+                    <b>${item.nama}</b><br/>
+                    Penduduk: ${item.jmlPenduduk?.toLocaleString?.() || '-'}<br/>
+                    UMR: Rp ${item.umr?.toLocaleString?.() || '-'}<br/>
+                    Pendapatan: Rp ${item.pendapatan?.toLocaleString?.() || '-'}
+                `;
                     polygon.bindPopup(popupContent);
                 }
+
                 group.addLayer(polygon);
             }
         });
 
         group.addTo(leafletMap.current);
         areaLayerGroupRef.current = group;
-    }, [daerahs, showAreaLayer, enableDaerahPopup]);
+    };
+
+    useEffect(() => {
+        dispatch(fetchBranches())
+            .unwrap()
+            .then(async (branches) => {
+                await Promise.all(branches.map(async (branch) => {
+                    if (branch.placeId) {
+                        try {
+                            const { rating, totalReview } = await fetchPlaceRatingById(branch.placeId);
+                            dispatch(updateBranchRating({
+                                branchId: branch.id,
+                                rating,
+                                totalReview
+                            }));
+                        } catch (err) {
+                            console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+                        }
+                    }
+                }));
+            })
+            .catch((err) => toast.error('Gagal fetch cabang: ' + err));
+        dispatch(fetchDaerahs())
+            .unwrap()
+            .then(() => {
+                renderDaerahLayer();
+            })
+            .catch(err => toast.error('Gagal fetch daerah: ' + err));
+
+        dispatch(fetchBrands()).unwrap().then((brands) => {
+            if (brands.length > 0) {
+                dispatch(fetchMenus(brands[0].id));
+            }
+        }).catch((err) => toast.error('Gagal fetch brand: ' + err));
+    }, [dispatch]);
+    // render daerah data
+    useEffect(() => {
+        if (leafletMap.current && daerahs.length > 0) {
+            renderDaerahLayer();
+        }
+    }, [leafletMap.current, daerahs, showAreaLayer, enableDaerahPopup]);
     useEffect(() => {
         if (!leafletMap.current && mapRef.current) {
             leafletMap.current = L.map(mapRef.current).setView([-6.9, 107.6], 12);
@@ -222,7 +250,6 @@ const ManageBranchData = () => {
             }
         }
     }, [showModalPenjualan, selectedPeriode, branchForm]);
-
     const handleLihatLokasi = () => {
         setMapMode('view');
         if (branchForm.area?.length && leafletMap.current) {
@@ -263,7 +290,6 @@ const ManageBranchData = () => {
 
         leafletMap.current.on('click', onMapClick);
     };
-
     const handleUbahCakupanArea = () => {
         if (!leafletMap.current) return;
         setMapMode('edit');
@@ -353,7 +379,6 @@ const ManageBranchData = () => {
             });
         }
     };
-
     const handleSimpanArea = async () => {
         if (!selectedArea || !selectedArea.coordinates?.length) return;
 
@@ -442,7 +467,6 @@ const ManageBranchData = () => {
             drawControlRef.current = null;
         }
     };
-
     const handleSaveBranch = async (e) => {
         e.preventDefault();
         if (!branchForm.nama || !branchForm.kode) {
@@ -463,7 +487,6 @@ const ManageBranchData = () => {
             })
             .catch((err) => toast.error("Gagal simpan: " + err));
     };
-
     const handleRowClick = (e) => {
         const row = e.target.closest("tr[data-branch-index]");
         if (!row) return; // Bukan klik pada row yang valid
@@ -498,7 +521,6 @@ const ManageBranchData = () => {
             .then(() => toast.success('Menu cabang berhasil diperbarui'))
             .catch((err) => toast.error('Gagal update menu cabang: ' + err));
     };
-
     return (
         <>
             {/* map */}
@@ -555,9 +577,23 @@ const ManageBranchData = () => {
                     <div className="card p-4 flex flex-col flex-1">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-medium">Top Performing Branches</h3>
-                            <select className="bg-gray-800 text-sm px-3 py-1 rounded">
-                                <option>This Month</option>
-                            </select>
+                            <Select
+                                label="Kategori Performa"
+                                variant="plain"
+                                options={[
+                                    "Penjualan Terakhir",
+                                    "Peningkatan Penjualan",
+                                    "Rata-rata Pendapatan Bulanan",
+                                    "Total Transaksi Bulanan",
+                                    "Menu Terlaris per Cabang",
+                                    "Rating Maps",
+                                    "Kontribusi Cabang terhadap Brand",
+                                    "Performa Cabang per Provinsi"
+                                ]}
+                                placeholder="Pilih Kategori Performa"
+                                value={''}
+                                onChange={() => { }}
+                            />
                         </div>
                         <div className="flex-1 min-h-0"> {/* 👈 penting untuk mencegah overflow */}
                             <BarChart branches={branches} />
@@ -565,7 +601,6 @@ const ManageBranchData = () => {
                     </div>
                 </div>
             </div>
-
             {/* table data list cabang */}
             <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
                 {/* datalist table */}
@@ -824,7 +859,7 @@ const ManageBranchData = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-gray-400 mb-1">Pilih Lokasi Cabang</label>
+                                    <label className="block text-sm text-gray-400 mb-1">GMaps Lokasi Cabang</label>
                                     <GooglePlaceAutocomplete
                                         onPlaceSelected={(place) => {
                                             setBranchForm(prev => ({
@@ -834,8 +869,12 @@ const ManageBranchData = () => {
                                         }}
                                         initialText={branchForm.placeId ? `Place ID: ${branchForm.placeId}` : ''}
                                     />
+                                    <div className="mt-1 text-sm text-gray-400 italic">
+                                        {
+                                            branchForm.rating ? `\u2605 ${branchForm.rating} / 5 dari ${branchForm.totalReview} review` : 'Belum rating google maps'
+                                        }
+                                    </div>
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     <div>
                                         <Button
@@ -843,7 +882,7 @@ const ManageBranchData = () => {
                                             size="medium"
                                             className="mb-2"
                                             onClick={handleLihatLokasi}
-                                        // disabled={!selectedArea}
+                                            disabled={branchForm.lokasi == null || !branchForm.lokasi}
                                         >
                                             Lihat Lokasi
                                         </Button>
@@ -852,7 +891,6 @@ const ManageBranchData = () => {
                                             size="medium"
                                             className="mb-2"
                                             onClick={handleEditLokasi}
-                                        // disabled={!selectedArea}
                                         >
                                             Ubah Titik Lokasi
                                         </Button>
@@ -862,7 +900,7 @@ const ManageBranchData = () => {
                                             variant="neutral"
                                             size="medium"
                                             onClick={handleUbahCakupanArea}
-                                        // disabled={!selectedArea}
+                                            disabled={branchForm.nama === ''}
                                         >
                                             Ubah Cakupan Area
                                         </Button>
@@ -872,13 +910,14 @@ const ManageBranchData = () => {
                                         <Button
                                             variant="danger"
                                             size="medium"
-                                        // disabled={!selectedArea}
+                                            disabled={branchForm.nama !== ''}
                                         >
                                             Hapus
                                         </Button>
                                         <Button
                                             variant="neutral"
                                             size="medium"
+                                            disabled={branchForm.nama == ''}
                                             onClick={() => {
                                                 setBranchForm(defaultBranchForm);
                                             }}
@@ -889,8 +928,7 @@ const ManageBranchData = () => {
                                             variant="primary"
                                             size="medium"
                                             type="submit"
-                                        // disabled={!selectedArea}
-
+                                            disabled={branchForm.nama === ''}
                                         >
                                             Save
                                         </Button>
@@ -1049,8 +1087,6 @@ const ManageBranchData = () => {
                             </div>
                         </div>
                     )}
-
-
                 </div>
             </div>
             {showModalMenu && (
@@ -1160,7 +1196,6 @@ const ManageBranchData = () => {
                     </div>
                 </Modal>
             )}
-
             {showModalPenjualan && (
                 <Modal width="xl" glass={false} onClose={() => setShowModalPenjualan(false)} title={"Penjualan Cabang " + branchForm.nama + " Periode " + selectedPeriode.bulan + " " + selectedPeriode.tahun}>
                     <CardLoadingOverlay isVisible={loadingBranch} />

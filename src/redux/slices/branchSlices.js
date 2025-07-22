@@ -10,7 +10,16 @@ const initialState = {
 const branchSlice = createSlice({
     name: 'branch',
     initialState,
-    reducers: {},
+    reducers: {
+        updateBranchRating: (state, action) => {
+            const { branchId, rating, totalReview } = action.payload;
+            const branch = state.items.find(item => item.id === branchId);
+            if (branch) {
+                branch.rating = rating;
+                branch.totalReview = totalReview;
+            }
+        }
+    },
     extraReducers: (builder) => {
         const pendingHandler = (state) => {
             state.loading = true;
@@ -79,7 +88,7 @@ const branchSlice = createSlice({
                 state.error = null;
             })
             .addCase(savePenjualan.fulfilled, (state, action) => {
-                const { branchId, periodeId, summary, detail} = action.payload;
+                const { branchId, periodeId, summary, detail } = action.payload;
                 const branch = state.items.find(b => b.id === branchId);
                 if (branch) {
                     if (!branch.penjualan) branch.penjualan = {};
@@ -104,5 +113,5 @@ const branchSlice = createSlice({
 
     },
 });
-
+export const { updateBranchRating } = branchSlice.actions;
 export default branchSlice.reducer;
