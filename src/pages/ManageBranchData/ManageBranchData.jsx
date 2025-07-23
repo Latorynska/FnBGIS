@@ -68,6 +68,7 @@ const ManageBranchData = () => {
     const [currentMenus, setCurrentMenus] = useState([]);
     const [currentFilteredMenus, setCurrentFilteredMenus] = useState([]);
     const [selectedPeriode, setSelectedPeriode] = useState({ bulan: '', tahun: '2021' });
+    const [chartCategory, setChartCategory] = useState("Penjualan Terakhir");
 
     const { items: daerahs, loading: loadingDaerahs, errorDaerahs } = useSelector((state) => state.daerah);
     const { items: Brands, loading: loadingBrand, errorBrand } = useSelector((state) => state.brand);
@@ -176,7 +177,7 @@ const ManageBranchData = () => {
                                 totalReview
                             }));
                         } catch (err) {
-                            console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+                            // console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
                         }
                     }
                 }));
@@ -575,8 +576,9 @@ const ManageBranchData = () => {
                 {/* chart */}
                 <div className="lg:col-span-3 flex flex-col">
                     <div className="card p-4 flex flex-col flex-1">
+                        <CardLoadingOverlay isVisible={loadingBranch} />
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-medium">Top Performing Branches</h3>
+                            <h3 className="font-medium">Overview Performa</h3>
                             <Select
                                 label="Kategori Performa"
                                 variant="plain"
@@ -588,15 +590,16 @@ const ManageBranchData = () => {
                                     "Menu Terlaris per Cabang",
                                     "Rating Maps",
                                     "Kontribusi Cabang terhadap Brand",
-                                    "Performa Cabang per Provinsi"
+                                    "Overall Performance",
+                                    "Serapan Potensi"
                                 ]}
                                 placeholder="Pilih Kategori Performa"
-                                value={''}
-                                onChange={() => { }}
+                                value={chartCategory}
+                                onChange={(e) => setChartCategory(e.target.value)}
                             />
                         </div>
-                        <div className="flex-1 min-h-0"> {/* 👈 penting untuk mencegah overflow */}
-                            <BarChart branches={branches} />
+                        <div className="flex-1 min-h-0">
+                            <BarChart category={chartCategory} />
                         </div>
                     </div>
                 </div>
@@ -891,6 +894,7 @@ const ManageBranchData = () => {
                                             size="medium"
                                             className="mb-2"
                                             onClick={handleEditLokasi}
+                                            disabled={branchForm.nama === ''}
                                         >
                                             Ubah Titik Lokasi
                                         </Button>
@@ -910,14 +914,14 @@ const ManageBranchData = () => {
                                         <Button
                                             variant="danger"
                                             size="medium"
-                                            disabled={branchForm.nama !== ''}
+                                            disabled={branchForm.nama === ''}
                                         >
                                             Hapus
                                         </Button>
                                         <Button
                                             variant="neutral"
                                             size="medium"
-                                            disabled={branchForm.nama == ''}
+                                            disabled={branchForm.nama === ''}
                                             onClick={() => {
                                                 setBranchForm(defaultBranchForm);
                                             }}

@@ -6,24 +6,50 @@ import 'leaflet/dist/leaflet.css';
 import Button from '../../components/Button/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import CardLoadingOverlay from '../../components/CardLoadingOverlay/CardLoadingOverlay';
-import { createDaerah, fetchDaerahs, updateDaerah } from '../../redux/thunks/daerahThunks';
+import { createDaerah, deleteDaerah, fetchDaerahs, updateDaerah } from '../../redux/thunks/daerahThunks';
 import { calculatePolygonArea } from '../../utils/geoUtils';
 
 // import geojsonData from './metadata-lokasi.json';
 import Pagination from '../../components/Pagination/Pagination';
+import toast from 'react-hot-toast';
+import Modal from '../../components/Modal/Modal';
+import TextInput from '../../components/TextInput/TextInput';
+
+const defaultFormData = { nama: '', kode: '', jmlPenduduk: '', provinsi: '', umr: '', pendapatan: '', area: [] };
 
 const MapMetadata = () => {
   const dispatch = useDispatch();
-  const [mapMode, setMapMode] = useState(null); // 'view' | 'edit'
+
+  if (L && L.GeometryUtil && L.GeometryUtil.readableArea) {
+    L.GeometryUtil.readableArea = function (area, isMetric) {
+      let areaStr;
+      if (isMetric) {
+        areaStr = area >= 1000000
+          ? (area / 1000000).toFixed(2) + ' km²'
+          : area.toFixed(2) + ' m²';
+      } else {
+        area *= 0.000247105; // acres
+        areaStr = area >= 1
+          ? area.toFixed(2) + ' acres'
+          : (area * 43560).toFixed(2) + ' ft²';
+      }
+      return areaStr;
+    };
+  }
+
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const editLayerRef = useRef(null);
+  const drawControlRef = useRef(null);
+  const drawnItemsRef = useRef(new L.FeatureGroup());
+
+  const [mapMode, setMapMode] = useState(null); // 'view' | 'edit'
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedArea, setSelectedArea] = useState(null);
   const [currentDaerahsData, setCurrentDaerahsData] = useState([]);
-  const [formData, setFormData] = useState({
-    nama: '', kode: '', jmlPenduduk: '', provinsi: '', umr: '', pendapatan: '', area: []
-  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState();
+
+  const [formData, setFormData] = useState(defaultFormData);
 
   const { items: daerahs, loading } = useSelector(state => state.daerah);
 
@@ -33,16 +59,27 @@ const MapMetadata = () => {
 
   const renderDaerahsToMap = () => {
     if (!leafletMap.current) return;
-
     leafletMap.current.eachLayer(layer => {
       if (layer instanceof L.Polygon) leafletMap.current.removeLayer(layer);
     });
 
     daerahs.forEach(daerah => {
+      const isValidArea =
+        Array.isArray(daerah.area) &&
+        daerah.area.length > 0 &&
+        Array.isArray(daerah.area[0]) &&
+        typeof daerah.area[0][0] === 'number' &&
+        typeof daerah.area[0][1] === 'number';
+
+      if (!isValidArea) return;
+
       const polygonCoords = daerah.area.map(([lat, lng]) => [lat, lng]);
 
       const polygon = L.polygon(polygonCoords, {
-        color: 'blue', weight: 2, fillColor: 'lightblue', fillOpacity: 0.5
+        color: 'blue',
+        weight: 2,
+        fillColor: 'lightblue',
+        fillOpacity: 0.5
       });
 
       polygon.bindPopup(`<b>${daerah.nama}</b>`);
@@ -54,6 +91,7 @@ const MapMetadata = () => {
       polygon.addTo(leafletMap.current);
     });
   };
+
 
   useEffect(() => {
     if (!leafletMap.current && mapRef.current) {
@@ -77,7 +115,7 @@ const MapMetadata = () => {
     if (leafletMap.current) setTimeout(() => leafletMap.current.invalidateSize(), 200);
   }, [isExpanded]);
 
-  const handleLihatLokasi = (e) => {
+  const handleLihatLokasi = () => {
     setMapMode('view');
     if (selectedArea?.coordinates?.length && leafletMap.current) {
       leafletMap.current.fitBounds(selectedArea.coordinates);
@@ -85,33 +123,86 @@ const MapMetadata = () => {
   };
 
   const handleUbahCakupanArea = () => {
-    if (!selectedArea?.coordinates?.length || !leafletMap.current) return;
-
+    if (!leafletMap.current) return;
     setMapMode('edit');
 
-    if (editLayerRef.current) {
-      leafletMap.current.removeLayer(editLayerRef.current);
+    // Hapus kontrol sebelumnya
+    if (drawControlRef.current) {
+      leafletMap.current.removeControl(drawControlRef.current);
+      drawControlRef.current = null;
     }
 
-    const polygon = L.polygon(selectedArea.coordinates, {
-      color: 'red',
-      weight: 2,
-      fillColor: 'orange',
-      fillOpacity: 0.6,
-    }).addTo(leafletMap.current);
+    // Mode TAMBAH area jika belum ada
+    if (!formData?.area?.length) {
+      drawControlRef.current = new L.Control.Draw({
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            showArea: true,
+            shapeOptions: { color: 'red' }
+          },
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          marker: false,
+          circlemarker: false,
+        },
+        edit: false,
+      });
 
-    editLayerRef.current = polygon;
+      leafletMap.current.addControl(drawControlRef.current);
 
-    const drawControl = new L.EditToolbar.Edit(leafletMap.current, {
-      featureGroup: L.featureGroup([polygon])
-    });
+      const onCreate = async (event) => {
+        const layer = event.layer;
+        const latlngs = layer.getLatLngs()[0];
+        const coords = latlngs.map(p => [p.lat, p.lng]);
 
-    drawControl.enable();
+        layer.addTo(leafletMap.current);
+        drawnItemsRef.current.addLayer(layer);
+        editLayerRef.current = layer;
 
-    polygon.on('edit', () => {
-      const latlngs = polygon.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
-      setSelectedArea({ ...selectedArea, coordinates: latlngs });
-    });
+        setSelectedArea({ name: formData.nama, coordinates: coords });
+        setFormData(prev => ({ ...prev, area: coords }));
+
+        leafletMap.current.off('draw:created', onCreate);
+        leafletMap.current.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+        setMapMode(null);
+      };
+
+      leafletMap.current.on('draw:created', onCreate);
+
+      setTimeout(() => {
+        document.querySelector('.leaflet-draw-draw-polygon')?.click();
+      }, 250);
+
+    } else {
+      // Mode EDIT area yang sudah ada
+      if (editLayerRef.current) {
+        leafletMap.current.removeLayer(editLayerRef.current);
+      }
+
+      const polygon = L.polygon(formData.area, {
+        color: 'red',
+        weight: 2,
+        fillColor: 'orange',
+        fillOpacity: 0.6,
+      }).addTo(leafletMap.current);
+
+      editLayerRef.current = polygon;
+
+      const drawControl = new L.EditToolbar.Edit(leafletMap.current, {
+        featureGroup: L.featureGroup([polygon])
+      });
+
+      drawControl.enable();
+
+      polygon.on('edit', () => {
+        const latlngs = polygon.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
+        setSelectedArea({ name: formData.nama, coordinates: latlngs });
+        setFormData(prev => ({ ...prev, area: latlngs }));
+      });
+    }
   };
 
   const handleSimpanArea = () => {
@@ -159,7 +250,6 @@ const MapMetadata = () => {
       editLayerRef.current = null;
     }
   };
-
   const handleSubmitForm = (e) => {
     e.preventDefault();
 
@@ -173,8 +263,56 @@ const MapMetadata = () => {
       area: selectedArea.coordinates,
     };
 
-    console.log('Submitting:', formSubmit);
-    dispatch(createDaerah(formSubmit));
+    if (formData?.id) {
+      dispatch(updateDaerah({ id: formData.id, data: formSubmit }))
+        .unwrap()
+        .then(() => {
+          toast.success('Data berhasil diperbarui');
+          handleLihatLokasi();
+        })
+        .catch((err) => toast.error('Gagal update: ' + err));
+    } else {
+      dispatch(createDaerah(formSubmit))
+        .unwrap()
+        .then(() => {
+          toast.success('Data berhasil ditambahkan');
+          handleLihatLokasi();
+        })
+        .catch((err) => toast.error('Gagal tambah: ' + err));
+    }
+
+    setMapMode(null);
+  };
+
+  const handleDelete = async () => {
+    if (!formData?.id) {
+      toast.error('Tidak ada data daerah yang dipilih.');
+      return;
+    }
+
+    try {
+      await dispatch(deleteDaerah(formData.id)).unwrap();
+      toast.success(`Berhasil menghapus daerah "${formData.nama}"`);
+      setFormData({
+        nama: '',
+        kode: '',
+        jmlPenduduk: '',
+        provinsi: '',
+        umr: '',
+        pendapatan: '',
+        area: [],
+        id: ''
+      });
+      setSelectedArea(null);
+      setShowDeleteConfirm(false);
+      if (editLayerRef.current && leafletMap.current) {
+        leafletMap.current.removeLayer(editLayerRef.current);
+        editLayerRef.current = null;
+      }
+
+    } catch (err) {
+      toast.error('Gagal menghapus daerah: ' + err);
+    }
   };
 
   return (
@@ -198,7 +336,6 @@ const MapMetadata = () => {
           className="rounded-lg border border-gray-700 bg-white transition-all duration-300 ease-in-out"
           style={{ height: isExpanded ? 800 : 400 }}
         />
-        {/* hanya aktif ketika sedang edit area */}
         {mapMode === 'edit' && (
           <div className="flex justify-end gap-2 mt-2">
             <Button variant='neutral' onClick={handleBatalEdit}>Batal</Button>
@@ -216,7 +353,7 @@ const MapMetadata = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium">All Branches</h3>
               <div className="flex space-x-2">
-                <Button variant="primary" size="small" icon="fas fa-plus"
+                <Button variant="primary" size="small" icon="fas fa-plus" onClick={() => setFormData(defaultFormData)}
                 >
                   Tambah Daerah
                 </Button>
@@ -332,40 +469,23 @@ const MapMetadata = () => {
             </div>
           </div>
         </div>
-        {/* old testing  */}
-        {/* <div className="card p-6 shadow rounded-lg border border-gray-200 bg-white">
-          <CardLoadingOverlay isVisible={loading} />
-          <h3 className="text-lg font-bold mb-4">Selected area :</h3>
-          {selectedArea ? (
-            <div className="text-sm space-y-2">
-              <p><strong>Nama:</strong> {selectedArea.name}</p>
-              <p className="text-xs text-gray-400 break-all">
-                <strong>Koordinat:</strong> {JSON.stringify(selectedArea.coordinates)}
-              </p>
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm italic">Klik salah satu area di peta untuk melihat detailnya</p>
-          )}
-        </div> */}
         <div className="card p-6">
           <CardLoadingOverlay isVisible={loading} />
           <h3 className="text-lg font-bold mb-4">Area Information</h3>
           <form className="space-y-4" onSubmit={handleSubmitForm}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Nama Daerah</label>
-                <input
+                <TextInput
+                  label='Nama Daerah'
                   type="text"
-                  className="input-field w-full px-4 py-2 rounded-lg"
                   value={formData.nama || ''}
                   onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Kode Wilayah</label>
-                <input
+                <TextInput 
+                  label='Kode Wilayah'
                   type="text"
-                  className="input-field w-full px-4 py-2 rounded-lg"
                   value={formData.kode || ''}
                   onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
                 />
@@ -418,7 +538,7 @@ const MapMetadata = () => {
                   size="medium"
                   className="mb-2"
                   onClick={handleLihatLokasi}
-                  disabled={!selectedArea}
+                  disabled={formData.area?.length === 0}
                 >
                   Lihat Lokasi
                 </Button>
@@ -428,7 +548,7 @@ const MapMetadata = () => {
                   variant="neutral"
                   size="medium"
                   onClick={handleUbahCakupanArea}
-                  disabled={!selectedArea}
+                  disabled={formData.nama === ''}
                 >
                   Ubah Cakupan Area
                 </Button>
@@ -439,7 +559,8 @@ const MapMetadata = () => {
                   variant="danger"
                   size="medium"
                   icon="fas fa-trash"
-                  disabled={!selectedArea}
+                  disabled={!formData.id}
+                  onClick={() => setShowDeleteConfirm(true)}
                 >
                   Hapus
                 </Button>
@@ -448,7 +569,7 @@ const MapMetadata = () => {
                   variant="neutral"
                   size="medium"
                   onClick={handleCancelForm}
-                  disabled={!selectedArea}
+                  disabled={formData.nama === ''}
                 >
                   Cancel
                 </Button>
@@ -458,7 +579,7 @@ const MapMetadata = () => {
                   size="medium"
                   icon="fas fa-save"
                   type="submit"
-                  disabled={!selectedArea}
+                  disabled={formData.nama === ''}
                 >
                   Save Changes
                 </Button>
@@ -468,6 +589,20 @@ const MapMetadata = () => {
           </form>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <Modal onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus Menu">
+          <p className="text-sm text-gray-300 mb-4">
+            Apakah Anda yakin ingin menghapus data daerah <strong>{formData?.nama}</strong>?
+          </p>
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button variant="neutral" size='medium' onClick={() => setShowDeleteConfirm(false)}>Batal</Button>
+            <Button variant="danger" size='medium' icon="fas fa-trash" onClick={handleDelete}>
+              Hapus
+            </Button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 };

@@ -7,6 +7,7 @@ import {
   updateDoc,
   doc,
   GeoPoint,
+  deleteDoc,
 } from 'firebase/firestore';
 
 export const fetchDaerahs = createAsyncThunk('daerah/fetchDaerah', async () => {
@@ -121,6 +122,20 @@ export const updateDaerah = createAsyncThunk(
       };
     } catch (error) {
       console.error('Update daerah error:', error);
+      return thunkAPI.rejectWithValue(error.message);
+    }
+  }
+);
+
+export const deleteDaerah = createAsyncThunk(
+  'daerah/deleteDaerah',
+  async (id, thunkAPI) => {
+    try {
+      const docRef = doc(db, 'daerah', id);
+      await deleteDoc(docRef);
+      return id;
+    } catch (error) {
+      console.error('Delete daerah error:', error);
       return thunkAPI.rejectWithValue(error.message);
     }
   }

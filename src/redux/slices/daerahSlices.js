@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { createDaerah, fetchDaerahs, updateDaerah } from '../thunks/daerahThunks';
+import { createDaerah, deleteDaerah, fetchDaerahs, updateDaerah } from '../thunks/daerahThunks';
 
 const initialState = {
   items: [],
@@ -49,7 +49,15 @@ const daerahSlice = createSlice({
         }
         state.loading = false;
       })
-      .addCase(updateDaerah.rejected, rejectedHandler);
+      .addCase(updateDaerah.rejected, rejectedHandler)
+      
+      // Delete
+      .addCase(deleteDaerah.pending, pendingHandler)
+      .addCase(deleteDaerah.fulfilled, (state, action) => {
+        state.items = state.items.filter(item => item.id !== action.payload);
+        state.loading = false;
+      })
+      .addCase(deleteDaerah.rejected, rejectedHandler);
   },
 });
 
