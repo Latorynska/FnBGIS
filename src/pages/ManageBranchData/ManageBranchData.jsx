@@ -124,13 +124,9 @@ const ManageBranchData = () => {
     };
     const renderDaerahLayer = (daerahList = daerahs) => {
         if (!leafletMap.current || !Array.isArray(daerahList)) return;
-
-        // Bersihkan layer lama
         if (areaLayerGroupRef.current) {
             leafletMap.current.removeLayer(areaLayerGroupRef.current);
         }
-
-        // Tidak render jika toggle dimatikan
         if (!showAreaLayer) return;
 
         const group = L.layerGroup();
@@ -162,7 +158,6 @@ const ManageBranchData = () => {
         group.addTo(leafletMap.current);
         areaLayerGroupRef.current = group;
     };
-
     useEffect(() => {
         dispatch(fetchBranches())
             .unwrap()
