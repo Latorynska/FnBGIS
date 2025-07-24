@@ -23,7 +23,7 @@ const ManageBrandInformation = () => {
         nama: '', kategori: '', kode: '', deskripsi: '', website: '', email: '', logoFile: null, iconUrl: ''
     });
     const [menuForm, setMenuForm] = useState({
-        nama: '', kategori: 'Food', deskripsi: '', harga: '', status: '', imageFile: null, gambarUrl: '', status: 'Tersedia',
+        nama: '', kategori: 'Food', deskripsi: '', harga: '', imageFile: null, gambarUrl: '', status: 'Tersedia',
     });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [menuToDelete, setMenuToDelete] = useState(null);

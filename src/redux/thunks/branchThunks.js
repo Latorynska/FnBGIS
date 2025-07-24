@@ -10,7 +10,9 @@ import {
   doc,
   GeoPoint,
   setDoc,
-  getDoc
+  getDoc,
+  query,
+  where
 } from 'firebase/firestore';
 
 // Utility: Convert GeoPoint or legacy format to [lat, lng]
@@ -48,11 +50,15 @@ const convertToGeoPoints = (areaArray) => {
 // GET
 export const fetchBranches = createAsyncThunk(
   'branch/fetch',
-  async (_, thunkAPI) => {
+  async (brandId, thunkAPI) => {
     try {
-      const colRef = collection(db, 'branches');
-      const snapshot = await getDocs(colRef);
+      const selectedBrandId = brandId || thunkAPI.getState().brand.items?.[0]?.id;
+      if (!selectedBrandId) return [];
 
+      const colRef = collection(db, 'branches');
+      const q = query(colRef, where("brandId", "==", selectedBrandId));
+      const snapshot = await getDocs(q);
+      console.log(snapshot);
       const branches = await Promise.all(snapshot.docs.map(async (branchDoc) => {
         const branchData = branchDoc.data();
         const branchId = branchDoc.id;

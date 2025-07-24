@@ -287,9 +287,9 @@ const BarChart = ({ category }) => {
 
           const serapan = potensiDaerah > 0 ? (totalPendapatan / potensiDaerah) * 100 : 0;
 
-          console.log(branch.penjualan);
-          console.log(potensiDaerah + ' / ' + totalPendapatan);
-          console.log(serapan);
+          // console.log(branch.penjualan);
+          // console.log(potensiDaerah + ' / ' + totalPendapatan);
+          // console.log(serapan);
           // console.log(
           //   `${branch.nama} => centroid: ${centroid} => daerah: ${daerahUtama?.nama} => serapan: ${serapan.toFixed(2)}%`
           // );
@@ -311,7 +311,7 @@ const BarChart = ({ category }) => {
 
   const chartData = useMemo(() => {
     const dataset = calculateDataByCategory();
-    console.log(dataset);
+    // console.log(dataset);
     return {
       labels: dataset.map(d => d.name),
       datasets: [

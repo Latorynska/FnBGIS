@@ -15,7 +15,7 @@ import Select from "../../components/Select/Select";
 import TextInput from "../../components/TextInput/TextInput";
 import CardLoadingOverlay from "../../components/CardLoadingOverlay/CardLoadingOverlay";
 
-import { fetchBranches, saveBranch, savePenjualan, updateBranch, updateBranchMenus } from "../../redux/thunks/branchThunks";
+import { deleteBranch, fetchBranches, saveBranch, savePenjualan, updateBranch, updateBranchMenus } from "../../redux/thunks/branchThunks";
 import toast from "react-hot-toast";
 import { fetchDaerahs } from "../../redux/thunks/daerahThunks";
 import { fetchBrands, fetchMenus } from "../../redux/thunks/brandThunks";
@@ -69,7 +69,7 @@ const ManageBranchData = () => {
     const [currentFilteredMenus, setCurrentFilteredMenus] = useState([]);
     const [selectedPeriode, setSelectedPeriode] = useState({ bulan: '', tahun: '2021' });
     const [chartCategory, setChartCategory] = useState("Penjualan Terakhir");
-
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { items: daerahs, loading: loadingDaerahs, errorDaerahs } = useSelector((state) => state.daerah);
     const { items: Brands, loading: loadingBrand, errorBrand } = useSelector((state) => state.brand);
     const { items: branches, loading: loadingBranch, error } = useSelector(state => state.branch);
@@ -159,38 +159,38 @@ const ManageBranchData = () => {
         areaLayerGroupRef.current = group;
     };
     useEffect(() => {
-        dispatch(fetchBranches())
-            .unwrap()
-            .then(async (branches) => {
-                await Promise.all(branches.map(async (branch) => {
-                    if (branch.placeId) {
-                        try {
-                            const { rating, totalReview } = await fetchPlaceRatingById(branch.placeId);
-                            dispatch(updateBranchRating({
-                                branchId: branch.id,
-                                rating,
-                                totalReview
-                            }));
-                        } catch (err) {
-                            console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+        const init = async () => {
+            try {
+                await dispatch(fetchDaerahs()).unwrap();
+                renderDaerahLayer();
+
+                const brands = await dispatch(fetchBrands()).unwrap();
+
+                if (brands.length > 0) {
+                    const brandId = brands[0].id;
+                    dispatch(fetchMenus(brandId));
+
+                    const branches = await dispatch(fetchBranches(brandId)).unwrap();
+
+                    for (const branch of branches) {
+                        if (branch.placeId) {
+                            try {
+                                const { rating, totalReview } = await fetchPlaceRatingById(branch.placeId);
+                                dispatch(updateBranchRating({ branchId: branch.id, rating, totalReview }));
+                            } catch (err) {
+                                console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+                            }
                         }
                     }
-                }));
-            })
-            .catch((err) => toast.error('Gagal fetch cabang: ' + err));
-        dispatch(fetchDaerahs())
-            .unwrap()
-            .then(() => {
-                renderDaerahLayer();
-            })
-            .catch(err => toast.error('Gagal fetch daerah: ' + err));
-
-        dispatch(fetchBrands()).unwrap().then((brands) => {
-            if (brands.length > 0) {
-                dispatch(fetchMenus(brands[0].id));
+                }
+            } catch (err) {
+                toast.error("Inisialisasi data gagal: " + err);
             }
-        }).catch((err) => toast.error('Gagal fetch brand: ' + err));
+        };
+
+        init();
     }, [dispatch]);
+
     // render daerah data
     useEffect(() => {
         if (leafletMap.current && daerahs.length > 0) {
@@ -246,6 +246,7 @@ const ManageBranchData = () => {
             }
         }
     }, [showModalPenjualan, selectedPeriode, branchForm]);
+
     const handleLihatLokasi = () => {
         setMapMode('view');
         if (branchForm.area?.length && leafletMap.current) {
@@ -469,10 +470,15 @@ const ManageBranchData = () => {
             toast.error("Nama dan kode wajib diisi");
             return;
         }
+        // Inject brandId dari brands[0]
+        const payloadWithBrand = {
+            ...branchForm,
+            brandId: Brands[0]?.id || null, // fallback ke null kalau belum ada
+        };
 
         const action = branchForm.id
-            ? updateBranch({ id: branchForm.id, data: branchForm })
-            : saveBranch(branchForm);
+            ? updateBranch({ id: branchForm.id, data: payloadWithBrand })
+            : saveBranch(payloadWithBrand);
 
         dispatch(action)
             .unwrap()
@@ -516,6 +522,22 @@ const ManageBranchData = () => {
             .unwrap()
             .then(() => toast.success('Menu cabang berhasil diperbarui'))
             .catch((err) => toast.error('Gagal update menu cabang: ' + err));
+    };
+    const handleDelete = async () => {
+        if (!branchForm?.id) {
+            toast.error('Tidak ada data daerah yang dipilih.');
+            return;
+        }
+
+        try {
+            await dispatch(deleteBranch(branchForm.id)).unwrap();
+            toast.success(`Berhasil menghapus cabang "${branchForm.nama}"`);
+            setBranchForm(defaultBranchForm);
+            setSelectedArea(null);
+            setShowDeleteConfirm(false);
+        } catch (err) {
+            toast.error('Gagal menghapus daerah: ' + err);
+        }
     };
     return (
         <>
@@ -630,10 +652,10 @@ const ManageBranchData = () => {
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nama Cabang</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Lokasi</th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Penjualan</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Peningkatan Penjualan</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rating Lokasi</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Afiliasi</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Show</th>
+                                        {/* <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Show</th> */}
                                     </tr>
                                 </thead>
                                 <tbody
@@ -652,9 +674,33 @@ const ManageBranchData = () => {
                                         )
                                             :
                                             currentBranchesData.map((branch, index) => {
+                                                const penjualan = branch.penjualan || {};
+                                                const periods = Object.keys(penjualan)
+                                                    .filter(p => typeof p === "string" && p.includes("-"))
+                                                    .sort();
 
-                                                const hasCoordinates = typeof branch.lat === "number" && typeof branch.lng === "number";
-                                                const hasArea = Array.isArray(branch.area) && branch.area.length > 0 && Array.isArray(branch.area[0]) && typeof branch.area[0][0] === "number" && typeof branch.area[0][1] === "number";
+                                                let peningkatan = null;
+                                                let growthLabel = "No data";
+                                                let isGrowthPositive = true;
+
+                                                if (periods.length >= 2) {
+                                                    const latest = periods[periods.length - 1];
+                                                    const prev = periods[periods.length - 2];
+
+                                                    const latestTotal = penjualan[latest]?.totalPendapatan || 0;
+                                                    const prevTotal = penjualan[prev]?.totalPendapatan || 0;
+
+                                                    if (prevTotal > 0) {
+                                                        peningkatan = ((latestTotal - prevTotal) / prevTotal) * 100;
+                                                    } else if (latestTotal > 0) {
+                                                        peningkatan = 100;
+                                                    } else {
+                                                        peningkatan = 0;
+                                                    }
+
+                                                    growthLabel = `${peningkatan.toFixed(1)}%`;
+                                                    isGrowthPositive = peningkatan >= 0;
+                                                }
 
                                                 return (
                                                     <tr
@@ -666,45 +712,35 @@ const ManageBranchData = () => {
                                                             <div className="text-sm">{branch.nama}</div>
                                                             <div className="text-xs text-gray-400">{branch.kode}</div>
                                                         </td>
-                                                        <td className="px-4 py-4 whitespace-nowrap">
-                                                            <div className="text-sm">Main Street</div>
-                                                            <div className="text-xs text-gray-400">1.2km radius</div>
+                                                        <td className="px-4 py-4 whitespace-normal break-words max-w-xs">
+                                                            <div className="text-sm">{branch.placeAddress || 'No data'}</div>
                                                         </td>
-                                                        <td className="px-4 py-4 whitespace-nowrap">
-                                                            <div className="text-sm">$</div>
-                                                            <div className="text-xs text-emerald-400">
-                                                                <i className="fas fa-arrow-up mr-1"></i> 12%
+                                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                                            {/* Kolom peningkatan penjualan */}
+                                                            <div className={`text-sm font-medium ${isGrowthPositive ? 'text-green-400' : 'text-red-400'}`}>
+                                                                {growthLabel}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-4 whitespace-nowrap">
-                                                            <div className="text-sm">{branch.customers}</div>
-                                                            <div className="text-xs text-emerald-400">
-                                                                <i className="fas fa-arrow-up mr-1"></i> 8%
+                                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                                            <div className={`text-sm font-medium`}>
+
+                                                                {branch.rating ?
+                                                                    branch.rating + ' / 5.0'
+                                                                    :
+                                                                    'no data'
+                                                                }
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4 whitespace-nowrap">
                                                             {branch.afiliasi}
                                                         </td>
-                                                        <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                                        {/* <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
                                                             <div className="flex justify-around">
-                                                                {/* <div className="space-y-1">
-                                                                    <button className="text-blue-400 hover:text-blue-300 mr-3">
-                                                                        <i className="fas fa-edit"></i>
-                                                                    </button>
-                                                                    <button className="text-gray-400 hover:text-gray-300 mr-3">
-                                                                        <i className="fas fa-chart-line"></i>
-                                                                    </button>
-                                                                    <button className="text-red-400 hover:text-red-300">
-                                                                        <i className="fas fa-trash"></i>
-                                                                    </button>
-                                                                </div> */}
-                                                                <input
-                                                                    type="checkbox"
-                                                                />
+                                                                <input type="checkbox" />
                                                             </div>
-                                                        </td>
+                                                        </td> */}
                                                     </tr>
-                                                )
+                                                );
                                             })}
                                 </tbody>
                             </table>
@@ -910,6 +946,7 @@ const ManageBranchData = () => {
                                             variant="danger"
                                             size="medium"
                                             disabled={branchForm.nama === ''}
+                                            onClick={() => setShowDeleteConfirm(true)}
                                         >
                                             Hapus
                                         </Button>
@@ -1303,6 +1340,19 @@ const ManageBranchData = () => {
                                 setShowModalPenjualan(false);
                             }}>
                             Simpan
+                        </Button>
+                    </div>
+                </Modal>
+            )}
+            {showDeleteConfirm && (
+                <Modal onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus Cabang">
+                    <p className="text-sm text-gray-300 mb-4">
+                        Apakah Anda yakin ingin menghapus data cabang <strong>{branchForm?.nama}</strong>?
+                    </p>
+                    <div className="flex justify-end space-x-3 pt-4">
+                        <Button variant="neutral" size='medium' onClick={() => setShowDeleteConfirm(false)}>Batal</Button>
+                        <Button variant="danger" size='medium' icon="fas fa-trash" onClick={handleDelete}>
+                            Hapus
                         </Button>
                     </div>
                 </Modal>

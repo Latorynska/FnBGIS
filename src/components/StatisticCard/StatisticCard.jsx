@@ -40,7 +40,7 @@ const StatisticCard = ({ title, description, subDescription, subDescStatus, icon
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-400">{title}</p>
-          <h3 className="text-2xl font-bold text-gray-900 text-white">{description}</h3>
+          <h3 className="text-2xl font-bold text-gray-900">{description}</h3>
           <p className={`text-xs mt-1 flex items-center ${className}`}>
             <i className={`fas ${icon} mr-1`}></i> {' ' + subDescription}
           </p>

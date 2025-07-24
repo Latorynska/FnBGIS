@@ -591,7 +591,7 @@ const MapMetadata = () => {
       </div>
 
       {showDeleteConfirm && (
-        <Modal onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus Menu">
+        <Modal onClose={() => setShowDeleteConfirm(false)} title="Konfirmasi Hapus Daerah">
           <p className="text-sm text-gray-300 mb-4">
             Apakah Anda yakin ingin menghapus data daerah <strong>{formData?.nama}</strong>?
           </p>

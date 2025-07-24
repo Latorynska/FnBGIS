@@ -159,37 +159,36 @@ const Dashboard = () => {
         areaLayerGroupRef.current = group;
     };
     useEffect(() => {
-        dispatch(fetchBranches())
-            .unwrap()
-            .then(async (branches) => {
-                await Promise.all(branches.map(async (branch) => {
-                    if (branch.placeId) {
-                        try {
-                            const { rating, totalReview } = await fetchPlaceRatingById(branch.placeId);
-                            dispatch(updateBranchRating({
-                                branchId: branch.id,
-                                rating,
-                                totalReview
-                            }));
-                        } catch (err) {
-                            console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+        const init = async () => {
+            try {
+                await dispatch(fetchDaerahs()).unwrap();
+                renderDaerahLayer();
+
+                const brands = await dispatch(fetchBrands()).unwrap();
+
+                if (brands.length > 0) {
+                    const brandId = brands[0].id;
+                    dispatch(fetchMenus(brandId));
+
+                    const branches = await dispatch(fetchBranches(brandId)).unwrap();
+
+                    for (const branch of branches) {
+                        if (branch.placeId) {
+                            try {
+                                const { rating, totalReview } = await fetchPlaceRatingById(branch.placeId);
+                                dispatch(updateBranchRating({ branchId: branch.id, rating, totalReview }));
+                            } catch (err) {
+                                console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+                            }
                         }
                     }
-                }));
-            })
-            .catch((err) => toast.error('Gagal fetch cabang: ' + err));
-        dispatch(fetchDaerahs())
-            .unwrap()
-            .then(() => {
-                renderDaerahLayer();
-            })
-            .catch(err => toast.error('Gagal fetch daerah: ' + err));
-
-        dispatch(fetchBrands()).unwrap().then((brands) => {
-            if (brands.length > 0) {
-                dispatch(fetchMenus(brands[0].id));
+                }
+            } catch (err) {
+                toast.error("Inisialisasi data gagal: " + err);
             }
-        }).catch((err) => toast.error('Gagal fetch brand: ' + err));
+        };
+
+        init();
     }, [dispatch]);
     // render daerah data
     useEffect(() => {

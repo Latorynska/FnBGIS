@@ -7,9 +7,9 @@ const Sidebar = () => {
     const isActive = (path) => location.pathname === path;
     const isVisible = useSelector((state) => state.usability.isSidebarVisible);
     const { userData } = useSelector((state) => state.auth);
-    useEffect(() => {
-        console.log(userData);
-    }, [userData]);
+    // useEffect(() => {
+    //     console.log(userData);
+    // }, [userData]);
     if (!isVisible) return null;
     return (
         <>
@@ -39,11 +39,15 @@ const Sidebar = () => {
                         <i className="fas fa-trademark w-5 text-center text-red-400"></i>
                         <span>Brand Data</span>
                     </Link>
-                    <Link to="manage-map-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-map-metadata') ? 'active-sidebar-item' : ''}`}>
-                        {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
-                        <i className="fas fa-landmark-flag w-5 text-center text-blue-400"></i>
-                        <span>Map Metadata</span>
-                    </Link>
+                    {
+                        userData.role === 'admin' && (
+                            <Link to="manage-map-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-map-metadata') ? 'active-sidebar-item' : ''}`}>
+                                {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
+                                <i className="fas fa-landmark-flag w-5 text-center text-blue-400"></i>
+                                <span>Map Metadata</span>
+                            </Link>
+                        )
+                    }
                     {/* <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
                     <i className="fas fa-chart-line w-5 text-center text-purple-400"></i>
                     <span>Performance</span>
