@@ -42,7 +42,7 @@ const BarChart = ({ category }) => {
       if (booleanPointInPolygon(pt, poly)) return daerah;
     }
 
-    return null; // fallback to null if no match
+    return null;
   };
   const getLatestPeriod = (penjualanObj = {}) => {
     const periods = Object.keys(penjualanObj);

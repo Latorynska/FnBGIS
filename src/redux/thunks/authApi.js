@@ -7,7 +7,7 @@ export const loginUser = createAsyncThunk('auth/loginUser', async (credentials, 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
       const user = userCredential.user;
-      
+      console.log(userCredential);
       const userDocRef = doc(db, 'users', user.uid.toString());
       const userDocSnapshot = await getDoc(userDocRef);
   
@@ -18,7 +18,18 @@ export const loginUser = createAsyncThunk('auth/loginUser', async (credentials, 
         return rejectWithValue('User data not found.');
       }
     } catch (error) {
-      return rejectWithValue(error.message);
+      console.log('Login error code:', error.code);
+      if (error.code === 'auth/user-not-found') {
+        return rejectWithValue('Email tidak terdaftar');
+      } else if (error.code === 'auth/wrong-password') {
+        return rejectWithValue('Password salah');
+      } else if (error.code === 'auth/invalid-email') {
+        return rejectWithValue('Format email tidak valid');
+      } else if (error.code === 'auth/invalid-credential') {
+        return rejectWithValue('Email atau password salah');
+      } else {
+        return rejectWithValue('Gagal login, silakan coba lagi');
+      }
     }
 });
   

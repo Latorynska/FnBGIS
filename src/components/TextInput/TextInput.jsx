@@ -7,7 +7,7 @@ const TextInput = ({
   name, 
   type = 'text', 
   placeholder = '', 
-  hint = '', // <== ini untuk teks tooltip bantuan
+  hint = '',
   ...props 
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -15,7 +15,7 @@ const TextInput = ({
   return (
     <div className="w-full relative">
       {label && (
-        <label className="block text-sm text-gray-400 mb-1 flex items-center gap-1" htmlFor={name}>
+        <label className="text-sm text-gray-400 mb-1 flex items-center gap-1" htmlFor={name}>
           {label}
           {hint && (
             <div

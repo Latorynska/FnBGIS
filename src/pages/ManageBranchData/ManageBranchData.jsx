@@ -177,7 +177,7 @@ const ManageBranchData = () => {
                                 totalReview
                             }));
                         } catch (err) {
-                            // console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
+                            console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
                         }
                     }
                 }));
@@ -490,7 +490,7 @@ const ManageBranchData = () => {
     };
     const handleRowClick = (e) => {
         const row = e.target.closest("tr[data-branch-index]");
-        if (!row) return; // Bukan klik pada row yang valid
+        if (!row) return;
 
         const index = row.getAttribute("data-branch-index");
         if (index === null) return;
