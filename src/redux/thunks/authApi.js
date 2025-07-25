@@ -4,33 +4,38 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'fire
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const loginUser = createAsyncThunk('auth/loginUser', async (credentials, { dispatch, rejectWithValue }) => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
-      const user = userCredential.user;
-      console.log(userCredential);
-      const userDocRef = doc(db, 'users', user.uid.toString());
-      const userDocSnapshot = await getDoc(userDocRef);
-  
-      if (userDocSnapshot.exists()) {
-        const userData = userDocSnapshot.data();
-        return userData;
-      } else {
-        return rejectWithValue('User data not found.');
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+    const user = userCredential.user;
+
+    const userDocRef = doc(db, 'users', user.uid.toString());
+    const userDocSnapshot = await getDoc(userDocRef);
+
+    if (userDocSnapshot.exists()) {
+      const userData = userDocSnapshot.data();
+
+      if (userData.status === 'deleted') {
+        return rejectWithValue('Akun tidak dapat diakses.');
       }
-    } catch (error) {
-      console.log('Login error code:', error.code);
-      if (error.code === 'auth/user-not-found') {
-        return rejectWithValue('Email tidak terdaftar');
-      } else if (error.code === 'auth/wrong-password') {
-        return rejectWithValue('Password salah');
-      } else if (error.code === 'auth/invalid-email') {
-        return rejectWithValue('Format email tidak valid');
-      } else if (error.code === 'auth/invalid-credential') {
-        return rejectWithValue('Email atau password salah');
-      } else {
-        return rejectWithValue('Gagal login, silakan coba lagi');
-      }
+
+      return userData;
+    } else {
+      return rejectWithValue('Data pengguna tidak ditemukan.');
     }
+  } catch (error) {
+    console.log('Login error code:', error.code);
+    if (error.code === 'auth/user-not-found') {
+      return rejectWithValue('Email tidak terdaftar');
+    } else if (error.code === 'auth/wrong-password') {
+      return rejectWithValue('Password salah');
+    } else if (error.code === 'auth/invalid-email') {
+      return rejectWithValue('Format email tidak valid');
+    } else if (error.code === 'auth/invalid-credential') {
+      return rejectWithValue('Email atau password salah');
+    } else {
+      return rejectWithValue('Gagal login, silakan coba lagi');
+    }
+  }
 });
   
 

@@ -5,6 +5,7 @@ import brandReducer from '../slices/brandSlices';
 import daerahReducer from '../slices/daerahSlices';
 import menuReducer from '../slices/menuSlices';
 import branchReducer from '../slices/branchSlices';
+import penggunaReducer from '../slices/penggunaSlices';
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
     daerah: daerahReducer,
     menu: menuReducer,
     branch: branchReducer,
+    pengguna: penggunaReducer
   },
 });
 

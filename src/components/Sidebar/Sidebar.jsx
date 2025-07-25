@@ -22,44 +22,41 @@ const Sidebar = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                    <Link to="/dashboard" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/dashboard') ? 'active-sidebar-item' : ''}`}>
-                        <i className="fas fa-tachometer-alt w-5 text-center text-emerald-400"></i>
-                        <span>Dashboard</span>
-                    </Link>
-                    {/* <Link to="manage-branch-area" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-area') ? 'active-sidebar-item' : ''}`}>
-                    <i className="fas fa-map-marked w-5 text-center text-yellow-400"></i>
-                    <span>Area Cabang</span>
-                </Link> */}
-                    <Link to="manage-branch-data" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-data') ? 'active-sidebar-item' : ''}`}>
-                        <i className="fas fa-store w-5 text-center text-blue-400"></i>
-                        <span>Data Cabang</span>
-                    </Link>
-                    <Link to="manage-brand-information" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-brand-information') ? 'active-sidebar-item' : ''}`}>
-                        {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
-                        <i className="fas fa-trademark w-5 text-center text-red-400"></i>
-                        <span>Brand Data</span>
-                    </Link>
                     {
-                        userData.role === 'admin' && (
-                            <Link to="manage-map-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-map-metadata') ? 'active-sidebar-item' : ''}`}>
-                                {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
-                                <i className="fas fa-landmark-flag w-5 text-center text-blue-400"></i>
-                                <span>Map Metadata</span>
-                            </Link>
+                        userData.role === 'owner' && (
+                            <>
+                                <Link to="/dashboard" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/dashboard') ? 'active-sidebar-item' : ''}`}>
+                                    <i className="fas fa-tachometer-alt w-5 text-center text-emerald-400"></i>
+                                    <span>Dashboard</span>
+                                </Link>
+                                <Link to="manage-branch-data" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-branch-data') ? 'active-sidebar-item' : ''}`}>
+                                    <i className="fas fa-store w-5 text-center text-blue-400"></i>
+                                    <span>Data Cabang</span>
+                                </Link>
+                                <Link to="manage-brand-information" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-brand-information') ? 'active-sidebar-item' : ''}`}>
+
+                                    <i className="fas fa-trademark w-5 text-center text-red-400"></i>
+                                    <span>Brand Data</span>
+                                </Link>
+                            </>
                         )
                     }
-                    {/* <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
-                    <i className="fas fa-chart-line w-5 text-center text-purple-400"></i>
-                    <span>Performance</span>
-                </Link>
-                <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
-                    <i className="fas fa-map-marked w-5 text-center text-yellow-400"></i>
-                    <span>Coverage Areas</span>
-                </Link> */}
-                    {/* <Link to="#" className="sidebar-item flex items-center space-x-3 p-3 rounded-lg">
-                    <i className="fas fa-cog w-5 text-center text-gray-400"></i>
-                    <span>Settings</span>
-                </Link> */}
+                    {
+                        userData.role === 'admin' && (
+                            <>
+                                <Link to="manage-map-metadata" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/manage-map-metadata') ? 'active-sidebar-item' : ''}`}>
+                                    {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
+                                    <i className="fas fa-landmark-flag w-5 text-center text-blue-400"></i>
+                                    <span>Map Metadata</span>
+                                </Link>
+                                <Link to="kelola-pengguna" className={`sidebar-item flex items-center space-x-3 p-3 rounded-lg ${isActive('/kelola-pengguna') ? 'active-sidebar-item' : ''}`}>
+                                    {/* <i className="fas fa-users w-5 text-center text-pink-400"></i> */}
+                                    <i className="fas fa-users w-5 text-center text-blue-400"></i>
+                                    <span>Kelola Pengguna</span>
+                                </Link>
+                            </>
+                        )
+                    }
                 </div>
 
                 <div className="p-4 border-t border-gray-800">

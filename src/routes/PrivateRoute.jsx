@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { loadUserData } from '../redux/thunks/authApi';
 import { useEffect, useState } from 'react';
 import LoadingScreen from '../pages/LoadingScreen/LoadingScreen';
@@ -33,7 +33,7 @@ const PrivateRoute = () => {
   // Delay hide loading screen for animation exit
   useEffect(() => {
     if (!loading) {
-      const timeout = setTimeout(() => setShowLoading(false), 400); // allow exit animation
+      const timeout = setTimeout(() => setShowLoading(false), 400);
       return () => clearTimeout(timeout);
     }
   }, [loading]);
@@ -43,6 +43,11 @@ const PrivateRoute = () => {
   }
 
   if (!auth.currentUser) {
+    return <Navigate to="/login" />;
+  }
+
+  if (userData?.status === 'deleted') {
+    signOut(auth);
     return <Navigate to="/login" />;
   }
 

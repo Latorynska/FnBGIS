@@ -15,6 +15,7 @@ import NotFound from './pages/NotFound/NotFound'
 import MapMetadata from './pages/MapMetadata/MapMetadata'
 import Logout from './pages/Logout/Logout'
 import { Toaster } from 'react-hot-toast';
+import KelolaPengguna from './pages/KelolaPengguna/KelolaPengguna'
 
 
 function App() {
@@ -78,6 +79,7 @@ function App() {
                 <Route path='/manage-branch-data' element={<ManageBranchData />} />
                 <Route path='/manage-brand-information' element={<ManageBrandInformation />} />
                 <Route path='/manage-map-metadata' element={<MapMetadata />} />
+                <Route path='/kelola-pengguna' element={<KelolaPengguna />} />
               </Route>
               <Route path='/logout' element={<Logout />} />
             </Route>
