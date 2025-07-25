@@ -925,7 +925,7 @@ const ManageBranchData = () => {
                                             size="medium"
                                             className="mb-2"
                                             onClick={handleEditLokasi}
-                                            disabled={branchForm.nama === ''}
+                                            disabled={!branchForm.id}
                                         >
                                             Ubah Titik Lokasi
                                         </Button>
@@ -935,7 +935,7 @@ const ManageBranchData = () => {
                                             variant="neutral"
                                             size="medium"
                                             onClick={handleUbahCakupanArea}
-                                            disabled={branchForm.nama === ''}
+                                            disabled={!branchForm.id}
                                         >
                                             Ubah Cakupan Area
                                         </Button>
@@ -945,7 +945,7 @@ const ManageBranchData = () => {
                                         <Button
                                             variant="danger"
                                             size="medium"
-                                            disabled={branchForm.nama === ''}
+                                            disabled={!branchForm.id}
                                             onClick={() => setShowDeleteConfirm(true)}
                                         >
                                             Hapus

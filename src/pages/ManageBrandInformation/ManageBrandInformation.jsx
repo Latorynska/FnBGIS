@@ -90,6 +90,11 @@ const ManageBrandInformation = () => {
         e.preventDefault();
         if (!brand.id) return;
 
+        if (!menuForm.nama?.trim() || !menuForm.harga) {
+            toast.error("Nama dan harga menu wajib diisi.");
+            return;
+        }
+
         let resizedImage = null;
         if (menuForm.imageFile) {
             try {
