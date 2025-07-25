@@ -470,15 +470,30 @@ const ManageBranchData = () => {
             toast.error("Nama dan kode wajib diisi");
             return;
         }
-        // Inject brandId dari brands[0]
-        const payloadWithBrand = {
-            ...branchForm,
-            brandId: Brands[0]?.id || null, // fallback ke null kalau belum ada
+        const payload = {
+            nama: branchForm.nama, 
+            kode: branchForm.kode, 
+            afiliasi: branchForm.afiliasi, 
+            telp: branchForm.telp, 
+            email: branchForm.email, 
+            placeId: branchForm.placeId, 
+            area: branchForm.area, 
+            lokasi: branchForm.lokasi, 
+            manajer: branchForm.manajer, 
+            telpManajer: branchForm.telpManajer, 
+            emailManajer: branchForm.emailManajer, 
+            establishedDate: branchForm.establishedDate, 
+            tanggalOpening: branchForm.tanggalOpening, 
+            tanggalValiditas: branchForm.tanggalValiditas, 
+            detailAlamat: branchForm.detailAlamat, 
+            menuCabang: branchForm.menuCabang, 
+            penjualan: branchForm.penjualan, 
+            brandId: Brands[0]?.id || null,
         };
-
+        // console.log(payload);
         const action = branchForm.id
-            ? updateBranch({ id: branchForm.id, data: payloadWithBrand })
-            : saveBranch(payloadWithBrand);
+            ? updateBranch({ id: branchForm.id, data: payload })
+            : saveBranch(payload);
 
         dispatch(action)
             .unwrap()
@@ -896,6 +911,7 @@ const ManageBranchData = () => {
                                     <label className="block text-sm text-gray-400 mb-1">GMaps Lokasi Cabang</label>
                                     <GooglePlaceAutocomplete
                                         onPlaceSelected={(place) => {
+                                            console.log(place);
                                             setBranchForm(prev => ({
                                                 ...prev,
                                                 placeId: place.place_id,
@@ -905,7 +921,7 @@ const ManageBranchData = () => {
                                     />
                                     <div className="mt-1 text-sm text-gray-400 italic">
                                         {
-                                            branchForm.rating ? `\u2605 ${branchForm.rating} / 5 dari ${branchForm.totalReview} review` : 'Belum rating google maps'
+                                            branchForm.rating ? `\u2605 ${branchForm.rating} / 5 dari ${branchForm.totalReview} review` : 'Belum ada rating google maps'
                                         }
                                     </div>
                                 </div>
