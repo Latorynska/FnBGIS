@@ -175,8 +175,8 @@ const ManageBranchData = () => {
                     for (const branch of branches) {
                         if (branch.placeId) {
                             try {
-                                const { rating, totalReview } = await fetchPlaceRatingById(branch.placeId);
-                                dispatch(updateBranchRating({ branchId: branch.id, rating, totalReview }));
+                                const { rating, totalReview, placeAddress } = await fetchPlaceRatingById(branch.placeId);
+                                dispatch(updateBranchRating({ branchId: branch.id, rating, totalReview, placeAddress }));
                             } catch (err) {
                                 console.warn(`Gagal ambil rating untuk ${branch.nama}:`, err);
                             }

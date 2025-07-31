@@ -10,13 +10,14 @@ export const fetchPlaceRatingById = (placeId) => {
     service.getDetails(
       {
         placeId,
-        fields: ['rating', 'user_ratings_total'],
+        fields: ['rating', 'user_ratings_total', 'formatted_address'],
       },
       (result, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK) {
           resolve({
             rating: result.rating,
             totalReview: result.user_ratings_total,
+            placeAddress: result.formatted_address,
           });
         } else {
           reject(`Gagal mengambil rating: ${status}`);

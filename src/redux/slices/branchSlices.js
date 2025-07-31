@@ -12,11 +12,12 @@ const branchSlice = createSlice({
     initialState,
     reducers: {
         updateBranchRating: (state, action) => {
-            const { branchId, rating, totalReview } = action.payload;
+            const { branchId, rating, totalReview, placeAddress } = action.payload;
             const branch = state.items.find(item => item.id === branchId);
             if (branch) {
                 branch.rating = rating;
                 branch.totalReview = totalReview;
+                branch.placeAddress = placeAddress;
             }
         }
     },
