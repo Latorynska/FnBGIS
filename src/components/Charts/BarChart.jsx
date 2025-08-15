@@ -19,6 +19,7 @@ ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 const BarChart = ({ category }) => {
   const { items: branches, loading: loadingBranch } = useSelector(state => state.branch);
   const { items: daerahs } = useSelector((state) => state.daerah);
+  const { items: menus } = useSelector((state) => state.menu);
   const colors = [
     'rgba(16, 185, 129, 0.7)',
     'rgba(59, 130, 246, 0.7)',
@@ -100,9 +101,12 @@ const BarChart = ({ category }) => {
             counter[menuId] = (counter[menuId] || 0) + qty;
           });
           const bestMenu = Object.entries(counter).sort((a, b) => b[1] - a[1])[0];
+          const menuName = menus.find(m => m.id === bestMenu?.[0])?.nama || '-';
+
           return {
             name: branch.nama,
-            value: bestMenu?.[1] || 0
+            value: bestMenu?.[1] || 0,
+            menuName
           };
         });
 
@@ -119,11 +123,13 @@ const BarChart = ({ category }) => {
             value: Math.round(percent)
           };
         });
+
       case "Rating Maps":
         return branches.map(branch => ({
           name: branch.nama,
           value: branch.rating ?? 0 // gunakan 0 jika undefined atau null
         }));
+
       case "Overall Performance":
         const getMax = (arr, fn) => Math.max(...arr.map(fn));
 
@@ -193,7 +199,8 @@ const BarChart = ({ category }) => {
             value: Math.round(score)
           };
         });
-      case "Serapan Potensi": {
+
+      case "Serapan Potensi":
         const getCentroid = (area) => {
           if (!Array.isArray(area) || area.length < 3) return [0, 0];
 
@@ -287,19 +294,35 @@ const BarChart = ({ category }) => {
 
           const serapan = potensiDaerah > 0 ? (totalPendapatan / potensiDaerah) * 100 : 0;
 
-          // console.log(branch.penjualan);
-          // console.log(potensiDaerah + ' / ' + totalPendapatan);
-          // console.log(serapan);
-          // console.log(
-          //   `${branch.nama} => centroid: ${centroid} => daerah: ${daerahUtama?.nama} => serapan: ${serapan.toFixed(2)}%`
-          // );
-
           return {
             name: branch.nama,
-            value: parseFloat(serapan.toFixed(2)), // tampilkan hingga 2 desimal
+            value: parseFloat(serapan.toFixed(2)),
+            daerah: daerahUtama?.nama,
+            potensiDaerah: potensiDaerah,
+            pendapatan: totalPendapatan
           };
         });
-      }
+
+      case "Capaian Target":
+        return branches.map(branch => {
+          const latestPeriod = getLatestPeriod(branch.penjualan);
+          const latestData = latestPeriod ? branch.penjualan[latestPeriod] : null;
+          
+          const targetPendapatan = (branch.targetPendapatan || 0);
+          const totalPendapatan = latestData?.totalPendapatan || 0;
+          
+          const percent = targetPendapatan > 0
+            ? (totalPendapatan / targetPendapatan) * 100
+            : 0;
+          console.log(totalPendapatan, targetPendapatan);
+          
+          return {
+            name: branch.nama,
+            value: parseFloat(percent.toFixed(2)),
+            target: targetPendapatan,
+            pendapatan: totalPendapatan
+          };
+        });
 
       default:
         return branches.map(branch => ({
@@ -311,13 +334,13 @@ const BarChart = ({ category }) => {
 
   const chartData = useMemo(() => {
     const dataset = calculateDataByCategory();
-    // console.log(dataset);
     return {
       labels: dataset.map(d => d.name),
       datasets: [
         {
           label: category,
           data: dataset.map(d => d.value),
+          meta: dataset,
           backgroundColor: dataset.map((_, i) => colors[i % colors.length]),
           borderColor: dataset.map((_, i) => borderColors[i % borderColors.length]),
           borderWidth: 1,
@@ -344,18 +367,43 @@ const BarChart = ({ category }) => {
         callbacks: {
           label: (context) => {
             const val = context.raw;
+            const meta = context.dataset.meta?.[context.dataIndex];
+
             switch (category) {
               case "Penjualan Terakhir":
               case "Peningkatan Penjualan":
               case "Rata-rata Pendapatan Bulanan":
-                return `${category}: Rp ${val.toLocaleString()} jt`;
+                return `${meta.name}: Rp ${val.toLocaleString()} jt`;
+
               case "Total Transaksi Bulanan":
               case "Menu Terlaris per Cabang":
-                return `${category}: ${val.toLocaleString()} transaksi`;
+                return [
+                  `Cabang: ${meta.name}`,
+                  `Menu: ${meta.menuName}`,
+                  `Terjual: ${val.toLocaleString()}`
+                ];
+
               case "Kontribusi Cabang terhadap Brand":
-                return `${category}: ${val}% dari total`;
+                return `${meta.name}: ${val}% dari total`;
+
+              case "Serapan Potensi":
+                return [
+                  `Cabang: ${meta.name}`,
+                  `Daerah: ${meta.daerah ?? '-'}`,
+                  `Potensi Daerah: Rp ${meta.potensiDaerah?.toLocaleString() ?? 0}`,
+                  `Pendapatan Cabang: Rp ${meta.pendapatan?.toLocaleString() ?? 0}`,
+                  `Serapan: ${val}%`
+                ];
+
+              case "Capaian Target":
+                return [
+                  `Cabang: ${meta.name}`,
+                  `Target: Rp ${meta.target?.toLocaleString()}`,
+                  `Pendapatan: Rp ${meta.pendapatan?.toLocaleString()}`,
+                  `Pencapaian: ${val}%`
+                ];
               default:
-                return `${category}: ${val}`;
+                return `${meta.name}: ${val}`;
             }
           }
         }
@@ -383,6 +431,7 @@ const BarChart = ({ category }) => {
       }
     }
   };
+
 
   return (
     <div className="relative w-full h-full">

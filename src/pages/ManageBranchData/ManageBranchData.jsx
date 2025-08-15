@@ -22,7 +22,7 @@ import { fetchBrands, fetchMenus } from "../../redux/thunks/brandThunks";
 import { fetchPlaceRatingById } from "../../helper/gMapsReviewHelper";
 import { updateBranchRating } from "../../redux/slices/branchSlices";
 
-const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], lokasi: null, manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [], penjualan: [], rating: '', totalReview: '' };
+const defaultBranchForm = { nama: '', kode: '', afiliasi: '', telp: '', email: '', placeId: '', area: [], lokasi: null, manajer: '', telpManajer: '', emailManajer: '', establishedDate: '', tanggalOpening: '', tanggalValiditas: '', detailAlamat: '', menuCabang: [], penjualan: [], rating: '', totalReview: '', targetPendapatan: 0 };
 const months = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
 const defaultPenjualan = { periode: '', catatan: '', totalTransaksi: '', pendapatan: '' };
 
@@ -471,23 +471,24 @@ const ManageBranchData = () => {
             return;
         }
         const payload = {
-            nama: branchForm.nama, 
-            kode: branchForm.kode, 
-            afiliasi: branchForm.afiliasi, 
-            telp: branchForm.telp, 
-            email: branchForm.email, 
-            placeId: branchForm.placeId, 
-            area: branchForm.area, 
-            lokasi: branchForm.lokasi, 
-            manajer: branchForm.manajer, 
-            telpManajer: branchForm.telpManajer, 
-            emailManajer: branchForm.emailManajer, 
-            establishedDate: branchForm.establishedDate, 
-            tanggalOpening: branchForm.tanggalOpening, 
-            tanggalValiditas: branchForm.tanggalValiditas, 
-            detailAlamat: branchForm.detailAlamat, 
-            menuCabang: branchForm.menuCabang, 
-            penjualan: branchForm.penjualan, 
+            nama: branchForm.nama,
+            kode: branchForm.kode,
+            afiliasi: branchForm.afiliasi,
+            telp: branchForm.telp,
+            email: branchForm.email,
+            placeId: branchForm.placeId,
+            area: branchForm.area,
+            lokasi: branchForm.lokasi,
+            manajer: branchForm.manajer,
+            telpManajer: branchForm.telpManajer,
+            emailManajer: branchForm.emailManajer,
+            establishedDate: branchForm.establishedDate,
+            tanggalOpening: branchForm.tanggalOpening,
+            tanggalValiditas: branchForm.tanggalValiditas,
+            detailAlamat: branchForm.detailAlamat,
+            menuCabang: branchForm.menuCabang,
+            penjualan: branchForm.penjualan,
+            targetPendapatan: branchForm.targetPendapatan,
             brandId: Brands[0]?.id || null,
         };
         // console.log(payload);
@@ -623,7 +624,8 @@ const ManageBranchData = () => {
                                     "Rating Maps",
                                     "Kontribusi Cabang terhadap Brand",
                                     "Overall Performance",
-                                    "Serapan Potensi"
+                                    "Serapan Potensi",
+                                    "Capaian Target"
                                 ]}
                                 placeholder="Pilih Kategori Performa"
                                 value={chartCategory}
@@ -670,7 +672,6 @@ const ManageBranchData = () => {
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Peningkatan Penjualan</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rating Lokasi</th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Afiliasi</th>
-                                        {/* <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Show</th> */}
                                     </tr>
                                 </thead>
                                 <tbody
@@ -749,11 +750,6 @@ const ManageBranchData = () => {
                                                         <td className="px-4 py-4 whitespace-nowrap">
                                                             {branch.afiliasi}
                                                         </td>
-                                                        {/* <td className="px-4 py-4 whitespace-nowrap text-center text-sm">
-                                                            <div className="flex justify-around">
-                                                                <input type="checkbox" />
-                                                            </div>
-                                                        </td> */}
                                                     </tr>
                                                 );
                                             })}
@@ -831,7 +827,6 @@ const ManageBranchData = () => {
                                         ]}
                                     />
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <TextInput
@@ -924,6 +919,15 @@ const ManageBranchData = () => {
                                             branchForm.rating ? `\u2605 ${branchForm.rating} / 5 dari ${branchForm.totalReview} review` : 'Belum ada rating google maps'
                                         }
                                     </div>
+                                </div>
+                                <div>
+                                    <TextInput
+                                        name={'targetPendapatan'}
+                                        value={branchForm.targetPendapatan ?? ""}
+                                        onChange={(e) => setBranchForm({ ...branchForm, targetPendapatan: e.target.value })}
+                                        label={'Target Pendapatan Cabang'}
+                                        type="number"
+                                    />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     <div>
